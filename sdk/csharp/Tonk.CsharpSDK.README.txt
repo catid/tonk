@@ -1,0 +1,141 @@
+To incorporate Tonk into your C# project:
+
+(1) Include the appropriate dynamic link library from the sdk/dll
+    directory next to your application.
+(2) Add the TonkCsharpSDK.cs file to your source code.
+
+To support Any CPU builds, read the OverrideDLLDirectory() documentation
+at the bottom of TonkCSharpSDK.cs
+
+Example applications may be found under the tests/ folder.
+
+
+Example client object:
+
+    class MyClient : SDKSocket
+    {
+        public bool Initialize()
+        {
+            // Set configuration
+            Config.UDPListenPort = 0;
+
+            SDKJsonResult result = Create();
+            if (result.Failed())
+            {
+                Console.WriteLine("Unable to create socket: {0}", result.ToString());
+                return result.Good();
+            }
+
+            SDKConnection connection = new MyClientConnection(this);
+            result = Connect(
+                connection,
+                "server.com",
+                5060);
+
+            if (result.Failed())
+            {
+                Console.Write("Unable to connect: {0}", result.ToString());
+            }
+            else
+            {
+                // Data can be sent even before connection completes
+                connection->Send(new byte[5]);
+            }
+
+            return result.Good();
+        }
+    };
+
+
+Example Connection object:
+
+    class MyClientConnection : SDKConnection
+    {
+        MyClient Client = null;
+
+        public MyClientConnection(MyClient client)
+        {
+            Client = client;
+        }
+
+        public override void OnConnect()
+        {
+            // React to connection completion here
+        }
+
+        public override unsafe void OnData(uint channel, byte* data, uint bytes)
+        {
+            if (bytes <= 0)
+                return;
+
+            // If data is type 1:
+            if (data[0] == 1)
+            {
+                // Read the first field using a provided utility function
+                UInt16 ts16 = Tonk.ReadU16_LE(data + 1);
+                // Decode a timestamp with 0.5 ms precision
+                UInt64 lo16 = FromLocalTime16(ts16);
+		UInt64 nowUsec = Tonk.tonk_time();
+
+                // Print out how long it took to send the packet from the server
+                Console.WriteLine("Transmission time (acc=16) = {0}", (int)(nowUsec - lo16));
+
+                return;
+            }
+
+            Console.WriteLine("Got {0} bytes of message data unexpected of type {1}", bytes, (int)data[0]);
+            Debug.Assert(false);
+        }
+
+        public override void OnTick(ulong nowUsec)
+        {
+            Tonk.Status status = GetStatus();
+
+            if (status.Flags.HasFlag(Tonk.Flags.TimeSync))
+            {
+                byte[] data = new byte[1 + 2 + 3 + 1300 - 4];
+
+                // Pick some contents for the data
+                for (int i = 0; i < data.Length; ++i)
+                    data[i] = (byte)i;
+
+                UInt16 ts16 = ToRemoteTime16(nowUsec);
+
+                unsafe
+                {
+                    fixed (byte* ptr = data)
+                    {
+                        ptr[0] = 1;
+                        Tonk.WriteU16_LE(ptr + 1, ts16);
+                    }
+                }
+
+                Send(data);
+            }
+        }
+
+        public override void OnClose(SDKJsonResult reason)
+        {
+            Console.WriteLine("OnClose({0})", reason.ToString());
+        }
+    }
+
+
+Example main():
+
+    // Choose linkage where we expect the Tonk.dll to be found under x86/ or x86_64/ based on platform
+    Tonk.OverrideDLLDirectory();
+
+    // Copy TonkDebug.dll in place of Tonk.dll so we use the debug version
+    #if DEBUG
+    Tonk.ReplaceWithDebugDll();
+    #endif
+
+    MyClient client = new MyClient();
+
+    if (client.Initialize())
+    {
+        // Wait until close here
+    }
+
+    client.Dispose();

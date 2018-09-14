@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="TonkTestTools.cpp" />
+    <ClCompile Include="TonkUnitTest.cpp" />
+    <ClCompile Include="..\Logger.cpp" />
+    <ClCompile Include="BandwidthControlTest.cpp" />
+    <ClCompile Include="mau\mau.cpp">
+      <Filter>Mau</Filter>
+    </ClCompile>
+    <ClCompile Include="mau\MauProxy.cpp">
+      <Filter>Mau</Filter>
+    </ClCompile>
+    <ClCompile Include="mau\MauTools.cpp">
+      <Filter>Mau</Filter>
+    </ClCompile>
+    <ClCompile Include="..\TonkCppSDK.cpp">
+      <Filter>SDK</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="TonkTestTools.h" />
+    <ClInclude Include="..\Logger.h" />
+    <ClInclude Include="BandwidthControlTest.h" />
+    <ClInclude Include="mau\mau.h">
+      <Filter>Mau</Filter>
+    </ClInclude>
+    <ClInclude Include="mau\MauProxy.h">
+      <Filter>Mau</Filter>
+    </ClInclude>
+    <ClInclude Include="mau\MauTools.h">
+      <Filter>Mau</Filter>
+    </ClInclude>
+    <ClInclude Include="..\TonkCppSDK.h">
+      <Filter>SDK</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="SDK">
+      <UniqueIdentifier>{f99499d8-f951-431d-b6cf-8a4527215886}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Mau">
+      <UniqueIdentifier>{ee62a2fd-bacc-46b1-b4a7-88050e665657}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

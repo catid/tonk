@@ -1,0 +1,54 @@
+        1, 2, 3, 4, ...
+        1, 2
+        1, 3
+        1, 4
+        2, 3
+        2, 4
+
+
+        Compare dx0 / dt0 to dx1 / dt1:
+
+        float slope_diff = fabsf(dx0/(float)dt0 - dx1/(float)dt1);
+
+        if (slope_diff < alpha) {
+        }
+
+        Note: dt_i > 0
+
+        int temp = dx0 * dt1 - dx1 * dt0;
+        if (temp < 0) {
+            temp = -temp;
+        }
+        if (temp < alpha * dt0 * dt1) {
+        }
+
+
+        Compare expected x1 versus actual x1:
+
+        int expected_x1 = x0 + (dx0 / dt0) * dt1;
+        int x1_diff = expected_x1 - x1;
+        if (x1_diff < 0) {
+            x1_diff = -x1_diff;
+        }
+        if (x1_diff < beta) {
+        }
+
+        Note: Cannot scale these values
+
+        // Using slope from (x2 - x0) / (t2 - t0) to extrapolate from
+        // x0 to midpoint at t1.  Compare with actual value x1.
+
+        int temp = (x1 - x0) * (t2 - t0) - (x2 - x0) * (t1 - t0);
+        if (temp < 0) {
+            temp = -temp;
+        }
+        if (temp < beta * (t2 - t0)) {
+        }
+
+
+        How to incorporate the scale from another sample?
+
+        The new line does not necessarily intersect any data points.
+
+        We need to pick new x0' and x2' points to describe the line.
+        Then we can continue to use the simple expression above.

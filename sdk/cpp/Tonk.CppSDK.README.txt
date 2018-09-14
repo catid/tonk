@@ -1,0 +1,26 @@
+To incorporate Tonk into your C++ project:
+
+Add TonkCppSDK.cpp, TonkCppSDK.h, and tonk.h to your source code.
+Add x86/tonk.dll and x86_64/tonk.dll to your application distribution.
+
+By default the C++ SDK will load the Tonk DLL from one of these relative paths:
+
+static const char* kLibrarySearchPaths_32[] = {
+    "tonk",
+    "x86\\tonk",
+    "..\\dll\\x86\\tonk",
+    "..\\..\\dll\\x86\\tonk",
+    "..\\..\\..\\dll\\x86\\tonk",
+    nullptr
+};
+static const char* kLibrarySearchPaths_64[] = {
+    "tonk",
+    "x86_64\\tonk",
+    "..\\dll\\x86_64\\tonk",
+    "..\\..\\dll\\x86_64\\tonk",
+    "..\\..\\..\\dll\\x86_64\\tonk",
+    nullptr
+};
+
+The test projects from the tests folder are written for the C++ SDK and
+provide good examples of server/client and peer2peer communications.

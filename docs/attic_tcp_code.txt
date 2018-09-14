@@ -1,0 +1,696 @@
+/// Set options for TCP sockets
+TONK_FORCE_INLINE Result SetTCPSocketOptions(
+    asio::ip::tcp::socket& socket)
+{
+    asio::error_code ec;
+    const char* operation;
+
+    operation = "linger";
+    socket.set_option(asio::socket_base::linger(false, 0), ec);
+    if (ec)
+        goto OnError;
+
+    operation = "no_delay";
+    socket.set_option(asio::ip::tcp::no_delay(true), ec);
+    if (ec)
+        goto OnError;
+
+    return Result::Success();
+
+OnError:
+    return Result("set_option", ec.message() + " from " + operation, ErrorType::Asio, ec.value());
+}
+
+
+
+
+#ifdef TONK_WIP_TCP
+    // ITCPHandler
+    void OnTCPConnect() override;
+    void OnTCPDatagram(uint64_t receiveUsec, const uint8_t* data, unsigned bytes) override;
+    void OnTCPInvalidData() override;
+    void OnTCPReadError(const asio::error_code& error) override;
+    void OnTCPReadClose() override;
+    void OnTCPSendError(const asio::error_code& error) override;
+#endif // TONK_WIP_TCP
+
+	
+
+#ifdef TONK_WIP_TCP
+
+    TCPSocket->async_connect(ServerTCPAddress, [this](const asio::error_code& error)
+    {
+        siamese::Locker locker(PrivateLock);
+
+        // If new connections are disallowed:
+        if (NewConnectionsDisallowed)
+        {
+            if (error)
+                Refs.Logger->Warning("Odd: Ignoring TCP connection *failure* after UDP handshake success");
+            else
+            {
+                Refs.Logger->Debug("Ignoring TCP connection success after UDP handshake success");
+
+                TCPSocket->close();
+            }
+        }
+        else
+        {
+            if (!error)
+                Refs.Handler->OnTCPConnect();
+            else
+            {
+                if (!Refs.Resolver->IsServerListExhausted())
+                    PostNextConnect();
+                else
+                {
+                    Refs.Logger->Warning("All connection attempts failed");
+
+                    NewConnectionsDisallowed = true;
+
+                    locker.Clear();
+                    // ^^^ Release ConnectionLock here ^^^
+
+                    Refs.Config->OnConnectFail(
+                        Params.CallbackContext,
+                        TonkFail_Unreachable);
+                }
+            }
+        }
+    });
+
+#endif // TONK_WIP_TCP
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+void ClientEventHandler::OnTCPConnect()
+{
+    siamese::Locker locker(PrivateLock);
+
+    Refs.Logger->Info("TCP connection success");
+
+    PostTCPSessionRequest();
+
+    PostNextTCPRead();
+}
+
+void ClientEventHandler::OnTCPReadError(const asio::error_code& error)
+{
+    siamese::Locker locker(PrivateLock);
+
+    Refs.Logger->Warning("TCP read error: ", error.message());
+
+    TCPConnected = false;
+    RestartConnection();
+}
+
+void ClientEventHandler::OnTCPReadClose()
+{
+    siamese::Locker locker(PrivateLock);
+
+    Refs.Logger->Error("TCP read: Connection closed");
+
+    TCPConnected = false;
+    RestartConnection();
+}
+
+void ClientEventHandler::OnTCPSendError(const asio::error_code& error)
+{
+    siamese::Locker locker(PrivateLock);
+
+    Refs.Logger->Error("TCP send error: ", error.message());
+
+    TCPConnected = false;
+    RestartConnection();
+}
+
+void ClientEventHandler::OnTCPInvalidData()
+{
+    siamese::Locker locker(PrivateLock);
+
+    Refs.Logger->Error("TCP datagram framing invalid");
+
+    TCPConnected = false;
+    RestartConnection();
+}
+
+void ClientEventHandler::OnTCPDatagram(
+    uint64_t receiveUsec, const uint8_t* data, unsigned bytes)
+{
+    siamese::Locker locker(PrivateLock);
+
+    // Read the packet number
+    unsigned packetNum = 0;
+    int footerBytes = siamese::DeserializeFooter_PacketNum(data, bytes, packetNum);
+    if (footerBytes < 1)
+        goto HandleInvalidData;
+    bytes -= footerBytes; // Deserializer already checks that this stays positive
+
+    // Read timestamp off the front
+    if (bytes <= 3)
+        goto HandleInvalidData;
+    siamese::ReadByteStream reader(data, bytes);
+    const uint64_t remoteSendUsec = reader.Read24() * kUDPDatagramTimestampLSB;
+    Refs.TimeSync->UpdateSampleUsec(remoteSendUsec, receiveUsec);
+
+    // Process all messages contained in the datagram:
+    while (reader.Remaining() > 0)
+    {
+        const unsigned flagsByte   = reader.Read8();
+        const unsigned messageType = flagsByte >> 5;
+
+        // Decode message length
+        unsigned messageLength = flagsByte & 15;
+        if (flagsByte & 16)
+        {
+            if (reader.Remaining() < 2)
+                goto HandleInvalidData;
+            messageLength |= (unsigned)reader.Read8() << 4;
+            if (messageLength > reader.Remaining())
+                goto HandleInvalidData;
+        }
+        else if (messageLength == 0)
+            messageLength = reader.Remaining();
+        else if (messageLength > reader.Remaining())
+            goto HandleInvalidData;
+
+        siamese::ReadByteStream message(reader.Read(messageLength), messageLength);
+        bool validMessage = true;
+
+        switch (messageType)
+        {
+        case TCPMessage_OOB:
+            OnOOBMessage(message);
+            break;
+        case TCPMessage_Unordered:
+            validMessage = OnUnorderedReliable(message);
+            break;
+        case TCPMessage_ReliableContinue1:
+            validMessage = OnReliableContinuation(0, message);
+            break;
+        case TCPMessage_ReliableContinue2:
+            validMessage = OnReliableContinuation(1, message);
+            break;
+        case TCPMessage_ReliableEnd1:
+            validMessage = OnReliableEnd(0, message);
+            break;
+        case TCPMessage_ReliableEnd2:
+            validMessage = OnReliableEnd(1, message);
+            break;
+        case TCPMessage_Connection:
+            validMessage = OnServerConnectionResponse(message);
+            break;
+        case TCPMessage_Flow_Control:
+            validMessage = OnFlowControl(message);
+            break;
+        default:
+            SIAMESE_DEBUG_BREAK; // Should never happen
+            goto HandleInvalidData;
+        }
+
+        if (!validMessage)
+            goto HandleInvalidData;
+    }
+
+AbortProcessingData:
+    return;
+
+HandleInvalidData:
+    OnInvalidData();
+}
+
+
+
+#ifdef TONK_WIP_TCP
+
+//------------------------------------------------------------------------------
+// SessionTCPSocket
+
+Result SessionTCPSocket::Initialize(const References& refs, const Parameters& params)
+{
+    siamese::Locker locker(PrivateLock);
+    SIAMESE_DEBUG_ASSERT(!Initialized);
+    Initialized = true;
+
+    Refs = refs;
+    Params = params;
+    Refs.Logger->Trace("SessionTCPSocket::Initialize");
+    return Result::Success();
+}
+
+void SessionTCPSocket::Shutdown()
+{
+    siamese::Locker locker(PrivateLock);
+
+    if (!Initialized)
+        return;
+    Initialized = false;
+
+    Refs.Logger->Trace("SessionTCPSocket::Shutdown");
+    DestroySocket();
+}
+
+Result SessionTCPSocket::CreateSocket(IPVersion bindIPVersion)
+{
+    siamese::Locker locker(PrivateLock);
+    Refs.Logger->Trace("SessionTCPSocket::CreateSocket");
+
+    const bool is_v4 = (bindIPVersion == IPVersion::V4);
+
+    try
+    {
+        // Create a TCP socket for the connection attempt
+        Socket = std::make_unique<asio::ip::tcp::socket>(Refs.Context->Get());
+        if (!Socket)
+            return Result("TCPSocket", "OOM", ErrorType::Asio);
+
+        Result result = SetSocketOptions(
+            Socket,
+            "TCPSocket",
+            Params.SendBufferSizeBytes,
+            Params.RecvBufferSizeBytes);
+        if (result.IsFail())
+        {
+            Refs.Logger->Error("SetSocketOptions failed: ", result.ToJson());
+            Socket = nullptr;
+            return result;
+        }
+
+        result = SetTCPSocketOptions(
+            Socket,
+            "TCPSocket");
+        if (result.IsFail())
+        {
+            Refs.Logger->Error("SetTCPSocketOptions failed: ", result.ToJson());
+            Socket = nullptr;
+            return result;
+        }
+
+        return Result::Success();
+    }
+    catch (...)
+    {
+        SIAMESE_DEBUG_BREAK; // Should never happen except out of memory error
+    }
+
+    Refs.Logger->Error("Exception during TCP socket creation");
+    Socket = nullptr;
+    return Result("TCPSocket unexpected exception", "OOM", ErrorType::Asio, 0);
+}
+
+void SessionTCPSocket::DestroySocket()
+{
+    siamese::Locker locker(PrivateLock);
+    Refs.Logger->Trace("SessionTCPSocket::DestroySocket");
+
+    if (Socket)
+    {
+        asio::error_code error;
+        Socket->close(error);
+        Socket = nullptr;
+
+        if (error)
+            Refs.Logger->Warning("Failure while destroying TCP socket: ", error.message());
+    }
+}
+
+void SessionTCPSocket::PostNextRead()
+{
+    siamese::Locker locker(PrivateLock);
+
+    SIAMESE_DEBUG_ASSERT(MaxReadBytes > 0);
+    auto mutableBuffer = ReceiveStreamBuf.prepare(MaxReadBytes);
+
+    Socket->async_read_some(mutableBuffer, [this](
+        const asio::error_code& error, std::size_t bytes_transferred)
+    {
+        const uint64_t receiveUsec = siamese::GetTimeUsec();
+
+        if (error)
+            Refs.Handler->OnTCPReadError(error);
+        else if (bytes_transferred <= 0)
+            Refs.Handler->OnTCPReadClose();
+        else
+        {
+            const uint8_t* data  = reinterpret_cast<const uint8_t*>(ReceiveStreamBuf.data().data());
+            const unsigned bytes = static_cast<unsigned>(ReceiveStreamBuf.data().size());
+
+            unsigned consumed = 0;
+
+            // If there is not enough data yet:
+            while (bytes >= 3)
+            {
+                // Read the frame length
+                const unsigned frameLength = siamese::ReadU16_LE(data);
+
+                // If the frame length is invalid:
+                if (frameLength == 0 || frameLength > kTCPFrameLengthMaxBytes)
+                {
+                    SIAMESE_DEBUG_BREAK; // Invalid input
+                    Refs.Handler->OnTCPInvalidData();
+                    return; // This will be the last TCP read
+                }
+
+                // If we have not received an entire frame yet:
+                const unsigned consumeBytes = 2 + frameLength;
+                if (consumeBytes > bytes)
+                    break;
+
+                Refs.Handler->OnTCPDatagram(receiveUsec, data + 2, frameLength);
+
+                consumed += consumeBytes;
+                data += consumeBytes;
+            }
+
+            SIAMESE_DEBUG_ASSERT(consumed <= bytes);
+
+            // If the number of bytes left in the buffer is longer than any packet should be:
+            if (consumed >= bytes || bytes >= consumed + MaxReadBytes)
+            {
+                Refs.Handler->OnTCPInvalidData();
+                return; // This will be the last TCP read
+            }
+
+            ReceiveStreamBuf.consume(consumed);
+
+            PostNextRead();
+        }
+    });
+}
+
+#endif // TONK_WIP_TCP
+
+
+#ifdef TONK_WIP_TCP
+
+//------------------------------------------------------------------------------
+// ITCPHandler
+
+class ITCPHandler
+{
+public:
+    virtual ~ITCPHandler() {}
+
+    // Callback when TCP connection succeeds
+    virtual void OnTCPConnect() = 0;
+
+    // Called when TCP datagram arrives
+    virtual void OnTCPDatagram(uint64_t receiveUsec, const uint8_t* data, unsigned bytes) = 0;
+
+    // Framing protocol data invalid
+    virtual void OnTCPInvalidData() = 0;
+
+    // Callback when TCP reads fail
+    virtual void OnTCPReadError(const asio::error_code& error) = 0;
+
+    // Callback when TCP socket is closed from read result.
+    // This can be due to intermittent network failure or explicit closure
+    virtual void OnTCPReadClose() = 0;
+
+    // Callback when TCP send fails
+    virtual void OnTCPSendError(const asio::error_code& error) = 0;
+};
+
+#endif // TONK_WIP_TCP
+
+
+#ifdef TONK_WIP_TCP
+
+//------------------------------------------------------------------------------
+// SessionTCPSocket
+
+class SessionTCPSocket
+{
+public:
+    virtual ~SessionTCPSocket() {}
+
+    struct References
+    {
+        logging::Channel* Logger;
+        ITCPHandler* Handler;
+        AsioContext* Context;
+    };
+    struct Parameters
+    {
+        unsigned SendBufferSizeBytes;
+        unsigned RecvBufferSizeBytes;
+    };
+
+    Result Initialize(const References& refs, const Parameters& params);
+    void Shutdown();
+
+
+    // Create the socket object
+    Result CreateSocket(IPVersion bindIPVersion);
+
+    // Destroy the socket object
+    void DestroySocket();
+
+    // Post the next TCP read for this socket
+    void PostNextRead();
+
+private:
+    mutable siamese::Lock PrivateLock;
+    bool Initialized = false;
+    References Refs;
+    Parameters Params;
+
+
+    // TCP socket
+    std::unique_ptr<asio::ip::tcp::socket> Socket;
+
+    // Receive stream buffer
+    asio::streambuf ReceiveStreamBuf;
+
+    // Maximum bytes to read at a time
+    unsigned MaxReadBytes = 0;
+
+    // Is the port being used to maintain a connection?
+    std::atomic_bool Connected = ATOMIC_VAR_INIT(false);
+};
+
+#endif // TONK_WIP_TCP
+
+
+#ifdef TONK_WIP_TCP
+
+// Set options for TCP sockets
+template<class SocketT> Result SetTCPSocketOptions(
+    SocketT& socket, const char* socketTypeName)
+{
+    const char* operation = "no_delay";
+    asio::error_code error;
+    socket->set_option(asio::ip::tcp::no_delay(true), error);
+    if (error)
+        goto HandleFailure;
+
+    return Result::Success();
+
+HandleFailure:
+    return Result("set_option", error.message() + " during " + socketTypeName + " set_option " + operation, ErrorType::Asio, error.value);
+}
+
+#endif // TONK_WIP_TCP
+
+
+#ifdef TONK_WIP_TCP
+
+//------------------------------------------------------------------------------
+// ServerTCPAcceptor
+
+Result ServerTCPAcceptor::Initialize(const References& refs, const Parameters& params)
+{
+    siamese::Locker locker(PrivateLock);
+    SIAMESE_DEBUG_ASSERT(!Initialized);
+    Initialized = true;
+
+    Refs = refs;
+    Params = params;
+    Refs.Logger->Trace("ServerTCPAcceptor::Initialize");
+    return Result::Success();
+}
+
+void ServerTCPAcceptor::Shutdown()
+{
+    siamese::Locker locker(PrivateLock);
+
+    if (!Initialized)
+        return;
+    Initialized = false;
+
+    Refs.Logger->Trace("ServerTCPAcceptor::Shutdown");
+    DestroySocket();
+}
+
+Result ServerTCPAcceptor::CreateSocket()
+{
+    siamese::Locker locker(PrivateLock);
+    Refs.Logger->Trace("ServerTCPAcceptor::CreateSocket");
+
+    try
+    {
+        // Create a TCP acceptor
+        asio::ip::tcp::endpoint BindTCPEndpoint(
+            asio::ip::tcp::v4(), Params.ServerTCPPort);
+        Acceptor = std::make_unique<asio::ip::tcp::acceptor>(
+            Refs.Context->Get(), BindTCPEndpoint);
+        if (!Acceptor)
+            return Result("TCPAcceptor", "OOM", ErrorType::Asio);
+
+        Result result = SetSocketOptions(
+            Acceptor,
+            "TCPAcceptor",
+            Params.SendBufferSizeBytes,
+            Params.RecvBufferSizeBytes);
+        if (result.IsFail())
+        {
+            Refs.Logger->Error("SetSocketOptions failed: ", result.ToJson());
+            Acceptor = nullptr;
+            return result;
+        }
+
+        result = SetTCPSocketOptions(
+            Acceptor,
+            "TCPAcceptor");
+        if (result.IsFail())
+        {
+            Refs.Logger->Error("SetTCPSocketOptions failed: ", result.ToJson());
+            Acceptor = nullptr;
+            return result;
+        }
+
+        return Result::Success();
+    }
+    catch (...)
+    {
+        SIAMESE_DEBUG_BREAK; // Should never happen except out of memory error
+    }
+
+    Refs.Logger->Error("Exception during TCP socket creation");
+    Acceptor = nullptr;
+    return Result("TCPSocket unexpected exception", "OOM", ErrorType::Asio, 0);
+}
+
+void ServerTCPAcceptor::DestroySocket()
+{
+    siamese::Locker locker(PrivateLock);
+    Refs.Logger->Trace("ServerTCPAcceptor::DestroySocket");
+
+    if (Acceptor)
+    {
+        asio::error_code error;
+        Acceptor->close(error);
+        Acceptor = nullptr;
+
+        if (error)
+            Refs.Logger->Warning("Failure while destroying TCP socket: ", error.message());
+    }
+}
+
+void ServerTCPAcceptor::PostNextAccept()
+{
+    siamese::Locker locker(PrivateLock);
+    Refs.Logger->Trace("ServerTCPAcceptor::PostNextAccept");
+
+    Socket = std::make_shared<asio::ip::tcp::socket>(Refs.Context->Get());
+
+    Acceptor->async_accept(*Socket, PeerAddress,
+        [this](const asio::error_code& error)
+    {
+        if (!!error)
+        {
+            Refs.Handler->OnAcceptError(error);
+            if (Socket)
+                Socket->close();
+        }
+        else
+            Refs.Handler->OnAccept(Socket, PeerAddress);
+
+        PostNextAccept();
+    });
+}
+
+#endif // TONK_WIP_TCP
+
+
+
+#ifdef TONK_WIP_TCP
+
+//------------------------------------------------------------------------------
+// IAcceptHandler
+
+class IAcceptHandler
+{
+public:
+    virtual ~IAcceptHandler() {}
+
+    // Called when accept error occurs
+    virtual void OnAcceptError(const asio::error_code& error) = 0;
+
+    // Called when accept succeeds
+    virtual void OnAccept(const std::shared_ptr<asio::ip::tcp::socket>& socket, const asio::ip::tcp::endpoint& address) = 0;
+};
+
+
+//------------------------------------------------------------------------------
+// ServerTCPAcceptor
+
+class ServerTCPAcceptor
+{
+public:
+    virtual ~ServerTCPAcceptor() {}
+
+    struct References
+    {
+        logging::Channel* Logger;
+        IAcceptHandler* Handler;
+        AsioContext* Context;
+    };
+    struct Parameters
+    {
+        unsigned short ServerTCPPort;
+        unsigned SendBufferSizeBytes;
+        unsigned RecvBufferSizeBytes;
+    };
+
+    Result Initialize(const References& refs, const Parameters& params);
+    void Shutdown();
+
+
+    // Create the socket object
+    Result CreateSocket();
+
+    // Destroy the socket object
+    void DestroySocket();
+
+    // Post the next TCP accept for this socket
+    void PostNextAccept();
+
+protected:
+    mutable siamese::Lock PrivateLock;
+    bool Initialized = false;
+    References Refs;
+    Parameters Params;
+
+
+    // TCP acceptor
+    std::shared_ptr<asio::ip::tcp::acceptor> Acceptor;
+
+    // TCP socket
+    std::shared_ptr<asio::ip::tcp::socket> Socket;
+
+    // Address of peer from connection
+    asio::ip::tcp::endpoint PeerAddress;
+};
+
+#endif // TONK_WIP_TCP
+

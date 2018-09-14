@@ -1,0 +1,223 @@
+This document describes how Tonk's NAT traversal algorithm works.
+
+Goals:
++ Do not impact any running data flows (use low bandwidth).
++ Exploit common NAT behaviors if possible to peer faster.
++ Allow phones to peer with other phones e.g. (c)(iii) case below.
+
+Non-goals:
++ Does not need run quickly (may take up to 30 seconds).  The server can
+be used to relay data until the peer link is established later.
+
+
+Possible NAT behaviors:
+
+If PeerA port 5000 sends a UDP datagram, a new public NAT port is chosen:
+(1) Never, always same public port - Very rare but helpful.
+(2) When destination IP is new.
+(3) When destination IP *or* port are new.
+
+New public NAT ports are:
+(a) Try to match the client port?  Otherwise:
+(b) Somewhat sequential.
+(c) Completely random.
+
+Public NAT port forwards data to PeerA port 5000 when unsolicited data is from:
+(i) Any peer.
+(ii) Any IP previously contacted.
+(iii) Any IP:port previously contacted.
+
+
+NAT Traversal proceeds in a series of rounds, initially attempting to leverage
+common NAT patterns to reduce overhead and connect faster.
+
+
+Rendezvous NAT traversal protocol:
+
+A central "rendezvous" server informs the peers of their public IP:ports.
+
+The peers are synchronized in time and run through a series of synchronized
+rounds.  In practice time synchronization is accurate within a few milliseconds,
+which is well within the requirements of the protocol.
+
+The following probe datagram is used:
+  Key(2 bytes) + ProbeFlag(1 byte) + Key(2 bytes)
+All probe datagrams have the same layout and contents.
+
+
+Round 1:
+
+One probe is sent from/to the client ports seen by the rendezvous server.
+
+Assuming that port numbers exactly match or are close to the client ports seen
+by the rendezvous server:  Bind 16 ports above and 16 ports below the external
+client port number, hoping that the NAT router will match this port on the
+public side (a) or will allocate ports roughly in sequence (b).  Attempt to have
+each port contact its twin on the other peer to help with case (iii), sending
+just 17 probes each way.
+
+When opening ports it is important that the port number is chosen explicitly,
+rather than allowing the operating system to pick by passing 0 to the bind() call.
+The ports should be chosen to be similar to the public port seen by the
+rendezvous server, so that port probing can be concentrated around that port.
+This port binding is extremely beneficial for the common case (a).  In this first
+round we are mostly banking on the external ports matching exactly on at least one
+of the 16 ports.
+
+The protocol:
++ Both sides open 16 UDP ports.
++ Both sides wait for the same instant in time.
++ Each port on each side will send a UDP probe packet.
+
+At the end of the process it is likely that at least one probe is received by
+at least one port on either side.  The receiver will return a connection request
+and begin a peer2peer connection using that port pair.
+
+If this fails, then we are in case (b)(iii) or (c)(i..iii).
+
+
+Rounds 2 and 3:
+
+Assuming that ports are selected somewhat randomly in a reasonable range
+of +/- 128 ports as in case (b): Choose 1 random target port each round, and
+send a probe to each of those ports for each of the 32 source ports.
+
+The protocol:
++ Both sides open an additional 16 UDP ports, up to 32 UDP ports.
++ Both sides wait for the same instant in time.
++ Each port on each side will send a UDP probe packet.
+
+At the end of the process it is possible that at least one probe is received by
+at least one port on either side.  The receiver will return a connection request
+and begin a peer2peer connection using that port pair.
+
+Odds of success?
+
+Sources and destinations must match so this is a constrained birthday problem.
+See the math discussion below for derivation.
+
+P_fail = (n-m)!^2 / (n! * (n-2*m)!)
+where n = number of ports in the range = 257
+and m = number of ports to use = 32
+(257-32)!^2 / (257! * (257-2*32)!) to 10 digits
+P_fail = 0.0105 = 1%
+
+This same protocol is run for two rounds so the combined odds of failure
+are pushed to 1/10,000.
+
+If this fails then the ports are hard to guess and we assume case (c).
+
+
+Remaining rounds up to 30 seconds (or until server connection closes):
+
+UPDATE: For now the remaining rounds are all disabled since the extra traffic
+seems to trigger some network protection systems and I have yet to see it work.
+
+In this case we are assuming to be in case (c) so it may take a lot more probes
+and a lot more source ports to get lucky with a match.
+
+The following protocol was described in the NATBLASTER paper as "Case 4":
+[ref.1] http://www.netsec.ethz.ch/publications/papers/natblaster.pdf
+
+A central "rendezvous" server informs the peers of their public IP:ports.
+
+The protocol for each round:
++ Both sides open up to 512 UDP ports bound to any port (0).
++ Both sides wait for the same instant in time.
++ Up to 16 ports on each side will send a UDP probe packet.
+
+The rate of rounds is tuned to avoid tripping rate limits on intermediate
+routers, running no faster than 100 ms per round.  At this fastest rate it
+would take 3 seconds to go through all 512 source ports and start over.
+
+At the end of the process it is possible that at least one probe is received by
+at least one port on either side.  The receiver will return a connection request
+and begin a peer2peer connection using that port pair.
+
+If no probes are received after 30 seconds then a failure is reported.
+
+
+How many ports should be opened for the protocol?
+
+m ports are randomly selected from 1024...65535.
+This is n=64512 port options to choose from.
+m = The number of ports and guesses.
+
+If a peer is case (i) or (ii) then it will accept data if the sender guesses its port.
+The probability that this peer will not accept any packets, as in [ref.1]:
+
+(n-m)(n-1-m)(n-2-m) ... (n-m-m+1) = (n-m)! / (n-2m)!
+---------------------------------   ----------------
+  n(n-1)(n-2)(n-3) ... (n-m+1)    =    n! / (n-m)!
+
+= (n-m)!^2 / (n! * (n-2*m)!)
+
+Plug into http://www.wolframalpha.com/ :
+(64512-m)!^2 / (64512! * (64512-2*m)!) to 10 digits
+where m = number of ports to use
+
+m   Probability of failure:
+10  0.998
+50  0.962
+100 0.856
+150 0.705
+200 0.53
+256 0.361
+300 0.496
+350 0.148
+384 0.1
+400 0.082
+450 0.042
+512 0.0166
+
+Going from 450 to 512: Opening just 14% more ports cut the failure down by over half.
+
+The odds of this protocol failing twice are multiplied, so two rounds will fail less
+than 0.27556% of the time for m=512 UDP ports.
+
+
+Since both sides are simultaneously connecting, which connection should be used?
+
+The tie-breaker protocol solves this:
+Server assigned A as tie-breaker.
+
+Example: Both A and B break through.
+A receives a probe.
+A stops listening to probes.
+A sends connection request.  If this is lost it will be retransmitted so no worries.
+A receives a connection request - A ignores it but keeps any attached data.
+A receives data from B.
+A closes unused UDP ports.
+B receives a probe.
+B stops listening to probes.
+B sends connection request.
+B receives a connection request.
+B sends data back.
+B receives data from A.
+B closes unused UDP ports.
+
+Example: Only B breaks through.
+A does not receive a probe.
+A receives a connection request.
+A stops listening to probes.
+A sends data back.
+A receives data from B.
+A closes unused UDP ports.
+B receives a probe.
+B stops listening to probes.
+B sends connection request.
+B receives data from A.
+B closes unused UDP ports.
+
+Example: Only A breaks through.
+A receives a probe.
+A stops listening to probes.
+A sends connection request.
+A receives data from B.
+A closes unused UDP ports.
+B does not receive a probe.
+B receives a connection request.
+B stops listening to probes.
+B sends data back.
+B receives data from A.
+B closes unused UDP ports.

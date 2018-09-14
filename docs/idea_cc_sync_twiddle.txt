@@ -1,0 +1,24 @@
+Idea: Replace timestamp bit with a CC sync twiddle bit.
+
+Time sync message contains new CC parameters and twiddle bit value.
+Sender side sets outgoing twiddle bit to the new one.
+
+Receiver side waits for the new twiddle bit value to evaluate changes in CC settings.
+
+Advantages:
+
+More robust to micro-changes in latency.
+More robust to edge cases where a bin straddles two CC parameters.
+Prevents CC from running ahead of actual measurements.
+
+Disadvantages:
+
+Lose optional timestamp bit.
+Complexity?
+Does not help for ramp patterns only CC parameters held constant for "a while."
+Implicitly tied to the RTT of the channel.
+
+Discussion on using a new field instead of a new bit:
+
+Adding another field would cost at least two bytes per packet.
+It would require a lot more processing to decode the meaning of the field.

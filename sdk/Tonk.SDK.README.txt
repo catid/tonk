@@ -1,0 +1,11 @@
+While the main source directory contains a C API for the Tonk library,
+the /sdk/ sub-directory contains language-specific SDKs for Tonk.
+
+/cpp/
+C++11 class inheritance and shared pointer objects.
+
+/csharp/
+C# class inheritance model.
+
+/unity/
+Unity C# DLL API wrapper and SDK.

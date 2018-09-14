@@ -1,0 +1,56 @@
+
+/// Set the current thread processor affinity
+bool SetCurrentThreadAffinity(unsigned processorIndex);
+
+enum class ThreadPriority
+{
+    High,
+    Normal,
+    Low,
+    Idle
+};
+
+/// Set the thread priority of the current thread
+bool SetCurrentThreadPriority(ThreadPriority prio);
+
+
+bool SetCurrentThreadPriority(ThreadPriority prio)
+{
+#ifdef _WIN32
+    int winPrio = THREAD_PRIORITY_NORMAL;
+    switch (prio)
+    {
+    case ThreadPriority::High: winPrio = THREAD_PRIORITY_ABOVE_NORMAL; break;
+    case ThreadPriority::Low:  winPrio = THREAD_PRIORITY_BELOW_NORMAL; break;
+    case ThreadPriority::Idle: winPrio = THREAD_PRIORITY_IDLE; break;
+    default: break;
+    }
+    return 0 != ::SetThreadPriority(::GetCurrentThread(), winPrio);
+#else
+    int niceness = 0;
+    switch (prio)
+    {
+    case ThreadPriority::High: niceness = 2; break;
+    case ThreadPriority::Low:  niceness = -2; break;
+    case ThreadPriority::Idle: niceness = 19; break;
+    default: break;
+    }
+    return -1 != nice(niceness);
+#endif
+}
+
+bool SetCurrentThreadAffinity(unsigned processorIndex)
+{
+#ifdef _WIN32
+    return 0 != ::SetThreadAffinityMask(
+        ::GetCurrentThread(), (DWORD_PTR)1 << (processorIndex & 63));
+#elif !defined(ANDROID)
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(processorIndex, &cpuset);
+    return 0 == pthread_setaffinity_np(pthread_self(),
+        sizeof(cpu_set_t), &cpuset);
+#else
+    return true; // FIXME: Unsupported on Android
+#endif
+}

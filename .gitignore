@@ -1,32 +1,65 @@
-# Prerequisites
-*.d
-
 # Compiled Object files
 *.slo
 *.lo
 *.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
 
 # Compiled Dynamic libraries
 *.so
 *.dylib
 *.dll
-
-# Fortran module files
-*.mod
-*.smod
+*.lib
+*.exp
+*.ilk
 
 # Compiled Static libraries
 *.lai
 *.la
 *.a
-*.lib
+*.opendb
+tests/.vs/Tonk/v15/Browse.VC.db
+*.suo
+*.ipch
+*.obj
+*.log
+*.tlog
+*.idb
+*.pdb
+*.db
+*.iobj
+*.ipdb
 
-# Executables
-*.exe
-*.out
-*.app
+*.vspx
+
+# Doxygen
+docs/
+
+# C#
+sdk/csharp/tests/TonkClientTest/bin/
+sdk/csharp/tests/TonkClientTest/obj/
+sdk/csharp/tests/TonkServerTest/bin/
+sdk/csharp/tests/TonkServerTest/obj/
+
+# DLL
+sdk/dll/windows/x64/
+sdk/dll/windows/Output/
+sdk/dll/windows/Output/
+sdk/dll/windows/ReleaseDLLStatic/
+sdk/dll/windows/x64/ReleaseDLLStatic/
+sdk/dll/windows/Debug/
+
+# NodeJS
+sdk/nodejs/tonk_client_test/node_modules/
+
+# Build artifacts
+build/
+dll/x86/
+dll/x86_64/
+proj/Debug/
+proj/DebugDLLStatic/
+proj/DebugExportStatic/
+proj/Release/
+proj/ReleaseDLLStatic/
+proj/ReleaseExportStatic/
+proj/x64/
+tests/Obj/
+tests/Output/

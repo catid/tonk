@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="..\thirdparty\zstd\error_private.h" />
+    <ClInclude Include="..\thirdparty\zstd\fse.h" />
+    <ClInclude Include="..\thirdparty\zstd\huf.h" />
+    <ClInclude Include="..\thirdparty\zstd\mem.h" />
+    <ClInclude Include="..\thirdparty\zstd\xxhash.h" />
+    <ClInclude Include="..\thirdparty\zstd\zstd.h" />
+    <ClInclude Include="..\thirdparty\zstd\zstd_compress_internal.h" />
+    <ClInclude Include="..\thirdparty\zstd\zstd_double_fast.h" />
+    <ClInclude Include="..\thirdparty\zstd\zstd_errors.h" />
+    <ClInclude Include="..\thirdparty\zstd\zstd_fast.h" />
+    <ClInclude Include="..\thirdparty\zstd\zstd_internal.h" />
+    <ClInclude Include="..\thirdparty\zstd\zstd_lazy.h" />
+    <ClInclude Include="..\thirdparty\zstd\zstd_ldm.h" />
+    <ClInclude Include="..\thirdparty\zstd\zstd_opt.h" />
+    <ClInclude Include="..\thirdparty\zstd\bitstream.h" />
+    <ClInclude Include="..\thirdparty\zstd\compiler.h" />
+    <ClInclude Include="..\thirdparty\zstd\cpu.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\thirdparty\zstd\fse_compress.c" />
+    <ClCompile Include="..\thirdparty\zstd\fse_decompress.c" />
+    <ClCompile Include="..\thirdparty\zstd\huf_compress.c" />
+    <ClCompile Include="..\thirdparty\zstd\huf_decompress.c" />
+    <ClCompile Include="..\thirdparty\zstd\xxhash.c" />
+    <ClCompile Include="..\thirdparty\zstd\zstd_common.c" />
+    <ClCompile Include="..\thirdparty\zstd\zstd_compress.c" />
+    <ClCompile Include="..\thirdparty\zstd\zstd_decompress.c" />
+    <ClCompile Include="..\thirdparty\zstd\zstd_double_fast.c" />
+    <ClCompile Include="..\thirdparty\zstd\zstd_fast.c" />
+    <ClCompile Include="..\thirdparty\zstd\zstd_lazy.c" />
+    <ClCompile Include="..\thirdparty\zstd\zstd_ldm.c" />
+    <ClCompile Include="..\thirdparty\zstd\zstd_opt.c" />
+    <ClCompile Include="..\thirdparty\zstd\entropy_common.c" />
+    <ClCompile Include="..\thirdparty\zstd\error_private.c" />
+  </ItemGroup>
+</Project>

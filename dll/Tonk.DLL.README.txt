@@ -1,0 +1,13 @@
+Dynamic linkage version of the Tonk library:
+
+Link to the 32-bit or 64-bit version based on your application.
+Debug versions may be substituted in to perform additional checks.
+
+x86/tonk.dll
+x86/tonk_debug.dll
+
+x86_64/tonk.dll
+x86_64/tonk_debug.dll
+
+Methods to automatically load the correct DLL based on 32/64-bit process
+are demonstrated in the SDK tests.

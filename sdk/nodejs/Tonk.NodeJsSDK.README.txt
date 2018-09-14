@@ -1,0 +1,15 @@
+WORK IN PROGRESS
+
+This is going to take a while as I'm still investigating the feasibility and scope.
+
+Notes:
++ 64-bit integers are not allowed so we need to clip the timestamps
+
+FFI:
+https://github.com/node-ffi/node-ffi/wiki/Node-FFI-Tutorial
+
+NAN:
++ It takes 25 lines of C++ code to add a float vector with nodejs addon
+
+NodeJS interface is probably for servers only, and only for JSON datatypes?
+Perhaps the API can be simplified greatly so that only the core features are exposed.

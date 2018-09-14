@@ -1,0 +1,152 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Cymric">
+      <UniqueIdentifier>{3e8fc5f4-e61f-446e-9e8d-df39c4d7956a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Siamese">
+      <UniqueIdentifier>{ebd123a8-768e-4701-941b-02f06b676c72}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Asio">
+      <UniqueIdentifier>{6b27d348-16e3-41e4-93e9-febee8022812}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="3rdParty">
+      <UniqueIdentifier>{7d082478-a270-44e7-9d97-9a2bae0d8180}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\tonk.cpp" />
+    <ClCompile Include="..\TonkineseTools.cpp" />
+    <ClCompile Include="..\gf256.cpp">
+      <Filter>Siamese</Filter>
+    </ClCompile>
+    <ClCompile Include="..\siamese.cpp">
+      <Filter>Siamese</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SiameseCommon.cpp">
+      <Filter>Siamese</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SiameseDecoder.cpp">
+      <Filter>Siamese</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SiameseEncoder.cpp">
+      <Filter>Siamese</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SiameseTools.cpp">
+      <Filter>Siamese</Filter>
+    </ClCompile>
+    <ClCompile Include="..\TonkineseProtocol.cpp" />
+    <ClCompile Include="..\thirdparty\blake2b-ref.c">
+      <Filter>Cymric</Filter>
+    </ClCompile>
+    <ClCompile Include="..\thirdparty\chacha.c">
+      <Filter>Cymric</Filter>
+    </ClCompile>
+    <ClCompile Include="..\thirdparty\chacha_blocks_ref.c">
+      <Filter>Cymric</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cymric.cpp">
+      <Filter>Cymric</Filter>
+    </ClCompile>
+    <ClCompile Include="..\stdafx.cpp" />
+    <ClCompile Include="..\thirdparty\t1ha.c">
+      <Filter>3rdParty</Filter>
+    </ClCompile>
+    <ClCompile Include="..\TonkineseConnection.cpp" />
+    <ClCompile Include="..\TonkineseOutgoing.cpp" />
+    <ClCompile Include="..\TonkineseIncoming.cpp" />
+    <ClCompile Include="..\TonkineseUDP.cpp" />
+    <ClCompile Include="..\TonkineseMaps.cpp" />
+    <ClCompile Include="..\TonkineseSession.cpp" />
+    <ClCompile Include="..\Logger.cpp" />
+    <ClCompile Include="..\PacketAllocator.cpp" />
+    <ClCompile Include="..\TonkineseBandwidth.cpp" />
+    <ClCompile Include="..\WLANOptimizer.cpp" />
+    <ClCompile Include="..\TimeSync.cpp" />
+    <ClCompile Include="..\StrikeRegister.cpp" />
+    <ClCompile Include="..\SimpleCipher.cpp" />
+    <ClCompile Include="..\TonkineseFlood.cpp" />
+    <ClCompile Include="..\TonkineseNAT.cpp" />
+    <ClCompile Include="..\TonkineseFirewall.cpp" />
+    <ClCompile Include="..\TonkineseUnity.cpp" />
+    <ClCompile Include="..\tonk_file_transfer.cpp" />
+    <ClCompile Include="..\MappedFile.cpp" />
+    <ClCompile Include="..\PacketCompression.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\tonk.h" />
+    <ClInclude Include="..\TonkineseTools.h" />
+    <ClInclude Include="..\gf256.h">
+      <Filter>Siamese</Filter>
+    </ClInclude>
+    <ClInclude Include="..\siamese.h">
+      <Filter>Siamese</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SiameseCommon.h">
+      <Filter>Siamese</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SiameseDecoder.h">
+      <Filter>Siamese</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SiameseEncoder.h">
+      <Filter>Siamese</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SiameseSerializers.h">
+      <Filter>Siamese</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SiameseTools.h">
+      <Filter>Siamese</Filter>
+    </ClInclude>
+    <ClInclude Include="..\TonkineseProtocol.h" />
+    <ClInclude Include="..\thirdparty\blake2-impl.h">
+      <Filter>Cymric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\chacha.h">
+      <Filter>Cymric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\blake2.h">
+      <Filter>Cymric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cymric.h">
+      <Filter>Cymric</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\asio.hpp">
+      <Filter>Asio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\IncludeAsio.h">
+      <Filter>Asio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stdafx.h" />
+    <ClInclude Include="..\thirdparty\t1ha.h">
+      <Filter>3rdParty</Filter>
+    </ClInclude>
+    <ClInclude Include="..\TonkineseConnection.h" />
+    <ClInclude Include="..\TonkineseOutgoing.h" />
+    <ClInclude Include="..\TonkineseIncoming.h" />
+    <ClInclude Include="..\TonkineseUDP.h" />
+    <ClInclude Include="..\TonkineseInterfaces.h" />
+    <ClInclude Include="..\TonkineseMaps.h" />
+    <ClInclude Include="..\TonkineseSession.h" />
+    <ClInclude Include="..\PacketAllocator.h" />
+    <ClInclude Include="..\Counter.h" />
+    <ClInclude Include="..\Logger.h" />
+    <ClInclude Include="..\TonkineseBandwidth.h" />
+    <ClInclude Include="..\WLANOptimizer.h" />
+    <ClInclude Include="..\TimeSync.h" />
+    <ClInclude Include="..\StrikeRegister.h" />
+    <ClInclude Include="..\SimpleCipher.h" />
+    <ClInclude Include="..\TonkineseFlood.h" />
+    <ClInclude Include="..\TonkineseNAT.h" />
+    <ClInclude Include="..\TonkineseFirewall.h" />
+    <ClInclude Include="..\TonkineseUnity.h" />
+    <ClInclude Include="..\tonk_file_transfer.h" />
+    <ClInclude Include="..\MappedFile.h" />
+    <ClInclude Include="..\PacketCompression.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\HolePunch.README.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\README.md" />
+  </ItemGroup>
+</Project>

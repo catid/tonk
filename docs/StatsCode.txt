@@ -1,0 +1,601 @@
+
+
+//------------------------------------------------------------------------------
+// HistogramEstimator
+
+/// Historical data collected for statistics
+struct HistoryBin
+{
+    /// First nonce in this bin
+    uint64_t NonceStart = 0;
+
+    /// SendTS24 for first packet in this bin
+    Counter24 FirstSendTS24 = 0;
+
+    /// Number of bytes in this bin
+    unsigned Bytes = 0;
+
+    /// Maximum one-way network trip time in microseconds
+    unsigned MaxTripUsec = 0;
+
+    /// Number of datagrams received in this bin
+    unsigned Count = 0;
+};
+
+/**
+    Bin-based estimator for running statistics.
+
+    Instead of having two bins that get cycled out every RTT milliseconds,
+    this estimator keeps a bin for every 32 milliseconds for the past 2 seconds.
+*/
+class HistogramEstimator
+{
+public:
+    /// Update based on a received datagram.
+    /// Returns true if statistics were updated
+    bool UpdateOnDatagram(const DatagramInfo& info);
+
+    /// Dump the history data to log
+    void Print() const;
+
+protected:
+    /// Bin interval in TS24 units.  Chosen to be a power of two for speed
+    static const unsigned kBinIntervalTS24 = 4096;
+
+    /// Bin interval in microseconds
+    static const unsigned kBinIntervalUsec = kBinIntervalTS24 << kTime23LostBits;
+
+    /// History depth in microseconds
+    /// Beyond about 2.5 seconds the data does not represent the channel
+    static const unsigned kHistoryDepthUsec = 2500 * 1000;
+
+    /// Number of history bins
+    static const unsigned kBinCount = kHistoryDepthUsec / kBinIntervalUsec;
+
+    /// History depth in TS24 units
+    static const unsigned kHistoryDepthTS24 = kBinCount * kBinIntervalTS24;
+
+    /// Next nonce expected, used to check if datagrams are arriving in order
+    NonceT NextNonce = 0;
+
+    /// Timestamp for zeroth history bin
+    Counter24 HistoryBaseTS24 = 0;
+
+    /// Historical data
+    HistoryBin History[kBinCount] = {};
+
+    /// Count of reordered packets seen in each bin
+    uint16_t ReorderCount[kBinCount] = {};
+
+
+    /// Reset on the given datagram
+    void Reset(const DatagramInfo& info);
+
+    /// Shift history bins down
+    void Shift(unsigned shift, const DatagramInfo& info);
+};
+
+
+//------------------------------------------------------------------------------
+// StatisticsEstimator
+
+/// Statistics bin
+struct StatisticsBin
+{
+    /// Receive time of first nonce in the latest bin
+    uint64_t FirstReceiveUsec = 0;
+
+    /// First nonce in the bin
+    uint64_t NonceStart = 0;
+
+    /// Number of nonces in the bin
+    unsigned Count = 0;
+
+    /// Number of bytes in this bin
+    unsigned Bytes = 0;
+
+
+    /// Accumulate a datagram into the stats bin
+    TONK_FORCE_INLINE void Accumulate(const DatagramInfo& info)
+    {
+        Count++;
+        Bytes += info.Bytes;
+    }
+};
+
+/// Statistics estimator
+class StatisticsEstimator
+{
+public:
+    /// Update based on a received datagram
+    /// Returns true if statistics were updated
+    bool UpdateOnDatagram(const DatagramInfo& info);
+
+    /// Get current packetloss rate estimate 0..1
+    TONK_FORCE_INLINE float GetPacketLossRate() const
+    {
+        return PacketLossRate;
+    }
+
+    /// Get current received bandwidth estimate in bytes per second
+    TONK_FORCE_INLINE int GetReceivedBPS() const
+    {
+        return ReceivedBPS;
+    }
+
+    /// Get current one-way network trip delay from remote peer in microseconds
+    TONK_FORCE_INLINE unsigned GetTripUsec() const
+    {
+        return TripUsec;
+    }
+
+    /// Get statistics for infrequent reporting
+    TONK_FORCE_INLINE ReceiverStatistics GetStatistics() const
+    {
+        // FIXME: Not thread-safe
+        ReceiverStatistics stats;
+        stats.LossRate = GetPacketLossRate();
+        stats.ReceivedBPS = GetReceivedBPS();
+        stats.TripUsec = GetTripUsec();
+        return stats;
+    }
+
+protected:
+    /// Statistics bins
+    StatisticsBin Bins[2];
+
+    /// Next nonce expected
+    uint64_t NonceNext = 0;
+
+    /// Packet loss rate
+    float PacketLossRate = 0.f;
+
+    /// Received bandwidth
+    int ReceivedBPS = 0;
+
+    /// One way delay for in-order packets in microseconds
+    unsigned TripUsec = protocol::kInitialOWDUsec;
+
+
+    /// Start new bin
+    void StartBin(const DatagramInfo& info);
+
+    /// Dump all the samples
+    void ClearSamples(const DatagramInfo& info);
+
+    /// Calculate bin interval
+    static unsigned CalculateBinInterval(unsigned owdUsec);
+};
+
+
+
+
+//------------------------------------------------------------------------------
+// HistogramEstimator
+
+bool HistogramEstimator::UpdateOnDatagram(const DatagramInfo& info)
+{
+    // Check if the datagram was reordered
+    const bool reordered = ((int64_t)(info.Nonce - NextNonce) < 0);
+    NextNonce = info.Nonce + 1;
+
+    // Bin offset in TS24 units
+    const Counter24 offsetTS24 = info.SendTS24 - HistoryBaseTS24;
+
+    //ModuleLogger.Info("TEST ", (info.SendTS24.ToUnsigned() << kTime23LostBits) / 1000, "ms : trip=", info.NetworkTripUsec, " bytes=", info.Bytes, " nonce=", info.Nonce);
+    //ModuleLogger.Info("TEST ", info.SendTS24.ToUnsigned(), "ms : trip=", info.NetworkTripUsec, " bytes=", info.Bytes, " nonce=", info.Nonce);
+
+    // If this just cleared (or initialized) the entire history:
+    if (offsetTS24.ToUnsigned() >= kHistoryDepthTS24 * 2)
+    {
+        // If it's shifting the bins then it must not be re-ordered because
+        // it is the latest one we have seen
+        TONK_DEBUG_ASSERT(!reordered);
+        Reset(info);
+        return true;
+    }
+
+    // Convert to a bin index up to twice the length of the history
+    const unsigned binIndex = offsetTS24.ToUnsigned() / kBinIntervalTS24;
+    TONK_DEBUG_ASSERT(binIndex < kBinCount * 2);
+
+    // If the history bins must be shifted down:
+    if (binIndex >= kBinCount)
+    {
+        // If it's shifting the bins then it must not be re-ordered because
+        // it is the latest one we have seen
+        TONK_DEBUG_ASSERT(!reordered);
+        Shift(binIndex - kBinCount + 1, info);
+        return true;
+    }
+
+    // If the bin has no data in it yet:
+    HistoryBin* bin = &History[binIndex];
+    if (0 == bin->Bytes)
+    {
+        // Initialize the bin
+        bin->Bytes = info.Bytes;
+        bin->FirstSendTS24 = info.SendTS24;
+        bin->MaxTripUsec = reordered ? 0 : info.NetworkTripUsec;
+        bin->NonceStart = info.Nonce;
+        bin->Count = 1;
+    }
+    else
+    {
+        // Accumulate into the bin
+        bin->Bytes += info.Bytes;
+        if (bin->FirstSendTS24 > info.SendTS24)
+            bin->FirstSendTS24 = info.SendTS24;
+        if (!reordered && bin->MaxTripUsec < info.NetworkTripUsec)
+            bin->MaxTripUsec = info.NetworkTripUsec;
+        if (bin->NonceStart > info.Nonce)
+            bin->NonceStart = info.Nonce;
+        bin->Count++;
+    }
+
+    // If this datagram was reordered:
+    if (reordered)
+    {
+        // If the reorder count is now close to overflow:
+        const uint16_t newCount = ++ReorderCount[binIndex];
+        if (newCount >= 64000)
+        {
+            // Halve all the bins
+            for (unsigned i = 0; i < kBinCount; ++i)
+                ReorderCount[i] /= 2;
+        }
+    }
+
+    return false;
+}
+
+void HistogramEstimator::Shift(unsigned shift, const DatagramInfo& info)
+{
+    ModuleLogger.Info("Shifting history by ", shift);
+
+    // Shift ahead the base time
+    HistoryBaseTS24 += shift * kBinIntervalTS24;
+
+    // Shift down history bins, shifting in zeros
+    TONK_DEBUG_ASSERT(shift > 0 && shift < kBinCount);
+    for (unsigned i = 0, count = kBinCount - shift; i < count; ++i)
+        History[i] = History[i + shift];
+    for (unsigned i = kBinCount - shift; i < kBinCount; ++i)
+        History[i] = HistoryBin();
+
+    // Initialize last bin
+    HistoryBin bin;
+    bin.Bytes = info.Bytes;
+    bin.FirstSendTS24 = info.SendTS24;
+    bin.NonceStart = info.Nonce;
+    bin.MaxTripUsec = info.NetworkTripUsec;
+    bin.Count = 1;
+    History[kBinCount - 1] = bin;
+}
+
+void HistogramEstimator::Reset(const DatagramInfo& info)
+{
+    ModuleLogger.Info("Reset history");
+
+    // Clear history
+    for (unsigned i = 0; i < kBinCount; ++i)
+    {
+        History[i] = HistoryBin();
+        ReorderCount[i] = 0;
+    }
+
+    // Align the start of the history so that the last bin starts with the first datagram
+    HistoryBaseTS24 = info.SendTS24 - kHistoryDepthTS24 + kBinIntervalTS24;
+
+    // Initialize last bin
+    HistoryBin bin;
+    bin.Bytes = info.Bytes;
+    bin.FirstSendTS24 = info.SendTS24;
+    bin.NonceStart = info.Nonce;
+    bin.MaxTripUsec = info.NetworkTripUsec;
+    bin.Count = 1;
+    History[kBinCount - 1] = bin;
+}
+
+void HistogramEstimator::Print() const
+{
+    static const unsigned kPrintBins = 16;
+    {
+        std::ostringstream oss;
+        for (unsigned i = kBinCount - kPrintBins; i < kBinCount; ++i)
+        {
+            unsigned bps = (unsigned)(((uint64_t)History[i].Bytes * 1000 * 1000) / kBinIntervalUsec);
+            oss << " " << std::setw(7) << (bps / 1000);
+        }
+        ModuleLogger.Info("KBPS:", oss.str());
+    }
+    {
+        std::ostringstream oss;
+        for (unsigned i = kBinCount - kPrintBins; i < kBinCount; ++i)
+        {
+            oss << " " << std::setw(7) << (History[i].MaxTripUsec / 1000);
+        }
+        ModuleLogger.Info("Trip:", oss.str());
+    }
+    {
+        std::ostringstream oss;
+        for (unsigned i = kBinCount - kPrintBins; i < kBinCount - 1; ++i)
+        {
+            oss << " " << std::setw(7) << (((int)History[i + 1].MaxTripUsec - (int)History[i].MaxTripUsec) / 1000);
+        }
+        ModuleLogger.Info("TDel:", oss.str());
+    }
+    {
+        std::ostringstream oss;
+        for (unsigned i = kBinCount - kPrintBins; i < kBinCount; ++i)
+        {
+            oss << " " << std::setw(7) << (ReorderCount[i]);
+        }
+        ModuleLogger.Info("Rder:", oss.str());
+    }
+    {
+        std::ostringstream oss;
+        for (unsigned i = kBinCount - kPrintBins; i < kBinCount - 1; ++i)
+        {
+            // FIXME: Doesn't work at very low rates
+            unsigned expected = (unsigned)(History[i + 1].NonceStart - History[i].NonceStart);
+            oss << " " << std::setw(7) << ((int)expected - (int)History[i].Count);
+        }
+        ModuleLogger.Info("Loss:", oss.str());
+    }
+}
+
+
+//------------------------------------------------------------------------------
+// StatisticsEstimator
+
+bool StatisticsEstimator::UpdateOnDatagram(const DatagramInfo& info)
+{
+    // If this is the latest nonce:
+    if ((int64_t)(info.Nonce - NonceNext) >= 0)
+    {
+        NonceNext = info.Nonce + 1;
+
+        // If network trip time is available:
+        if (info.NetworkTripUsec > 0)
+        {
+            // Update OWD estimate using EWMA for in-order packets
+            TripUsec = (TripUsec * 7 + info.NetworkTripUsec) / 8;
+        }
+
+        // Calculate the bin interval
+        const unsigned intervalUsec = CalculateBinInterval(TripUsec);
+
+        // Calculate time since start of latest bin
+        const unsigned deltaUsec = (unsigned)(info.ReceiveUsec - Bins[1].FirstReceiveUsec);
+        TONK_DEBUG_ASSERT((int64_t)(info.ReceiveUsec - Bins[1].FirstReceiveUsec) >= 0);
+
+        // If the interval has elapsed:
+        if (deltaUsec >= intervalUsec)
+        {
+            // If a whole interval went by without a packet:
+            if (deltaUsec >= intervalUsec * 2)
+                ClearSamples(info);
+            else
+                StartBin(info);
+
+            // Skip accumulating sample
+            return true; // Update occurred
+        }
+    }
+
+    // If the packet is in the latest bin:
+    if ((int64_t)(info.Nonce - Bins[1].NonceStart) >= 0)
+        Bins[1].Accumulate(info);
+    // Otherwise if the packet is in the prior bin:
+    else if ((int64_t)(info.Nonce - Bins[0].NonceStart) >= 0)
+        Bins[0].Accumulate(info);
+
+    return false; // No update in stats yet
+}
+
+void StatisticsEstimator::StartBin(const DatagramInfo& info)
+{
+    // Get the count of nonces that should have been seen
+    const unsigned nonceRange = static_cast<unsigned>(Bins[1].NonceStart - Bins[0].NonceStart);
+
+    // Count of nonces that were seen
+    const unsigned receivedCount = Bins[0].Count;
+
+    // If there is a statistically significant number of samples
+    static const unsigned kMinSamples = 3;
+    if (nonceRange >= kMinSamples)
+    {
+        TONK_DEBUG_ASSERT(receivedCount > 0);
+
+        // Calculate the loss rate
+        const float lossRate = 1.f - receivedCount / (float)nonceRange;
+
+        // Exponentially Weighted Moving Average (EWMA)
+        // https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
+        // PLR = PLR*7/8 + New/8
+        PacketLossRate = PacketLossRate * 0.875f + lossRate * 0.125f;
+
+        // Bound packet loss rate between 0..1
+        if (PacketLossRate < 0.f)
+            PacketLossRate = 0.f;
+        else if (PacketLossRate > 1.f)
+            PacketLossRate = 1.f;
+
+        // Calculate bandwidth in bytes per second
+        const int intervalUsec = (int)(Bins[1].FirstReceiveUsec - Bins[0].FirstReceiveUsec);
+        if (intervalUsec > 0)
+        {
+            const unsigned bps = (unsigned)(((uint64_t)Bins[0].Bytes * 1000000) / (unsigned)intervalUsec);
+
+            // Incorporate bps into the estimate with EWMA
+            ReceivedBPS = (ReceivedBPS * 7 + bps) / 8;
+        }
+    }
+
+    // Shift latest bin into older bin (losing old data)
+    Bins[0] = Bins[1];
+
+    // Start a new bin
+    Bins[1].Count = 1;
+    Bins[1].NonceStart = info.Nonce;
+    Bins[1].Bytes = info.Bytes;
+    Bins[1].FirstReceiveUsec = info.ReceiveUsec;
+}
+
+void StatisticsEstimator::ClearSamples(const DatagramInfo& info)
+{
+    Bins[0].Bytes = 0;
+    Bins[0].Count = 0;
+    Bins[0].NonceStart = info.Nonce;
+    Bins[0].FirstReceiveUsec = info.ReceiveUsec;
+
+    Bins[1].Count = 1;
+    Bins[1].NonceStart = info.Nonce;
+    Bins[1].Bytes = info.Bytes;
+    Bins[1].FirstReceiveUsec = info.ReceiveUsec;
+}
+
+unsigned StatisticsEstimator::CalculateBinInterval(unsigned owdUsec)
+{
+    // Interval is 2*OWD to allow for plenty of time for data to arrive
+    const unsigned intervalUsec = owdUsec * 2;
+
+    // Bound the interval
+    static const unsigned kIntervalMinUsec = 500 * 1000; // 500 ms
+    static const unsigned kIntervalMaxUsec = 2 * 1000 * 1000; // 2000 ms
+    if (intervalUsec >= kIntervalMaxUsec)
+        return kIntervalMaxUsec;
+    if (intervalUsec <= kIntervalMinUsec)
+        return kIntervalMinUsec;
+
+    return intervalUsec;
+}
+
+
+
+
+//------------------------------------------------------------------------------
+// PacketLossRateEstimator
+
+/// Statistics bin
+struct StatisticsBin
+{
+    /// Receive time of first nonce in the latest bin
+    uint64_t FirstReceiveUsec = 0;
+
+    /// First nonce in the bin
+    uint64_t NonceStart = 0;
+
+    /// Number of nonces in the bin
+    unsigned Count = 0;
+};
+
+/// Statistics tracking packet loss rate (PLR)
+class PacketLossRateEstimator
+{
+public:
+    /// Handle a datagram being received.
+    /// Returns true if packetloss estimate was updated
+    bool UpdateOnDatagram(const DatagramInfo& datagram);
+
+
+    /// Latest datagram is reordered?
+    bool IsReordered = false;
+
+    /// Get estimate of PLR
+    float EstimatePLR() const
+    {
+        // Return the larger of latest/smoothed.
+        // This is similar to a 1-euro filter allowing fast reaction
+        // time, but also some low pass filtering
+        if (LatestPLR > SmoothedPLR)
+            return LatestPLR;
+        else
+            return SmoothedPLR;
+    }
+
+protected:
+    /// Next expected nonce
+    NonceT NextExpectedNonce = 0;
+
+    /// Statistics bins
+    StatisticsBin LatestBin, DejitterBin;
+
+    /// Latest PLR from the last interval
+    float LatestPLR = 0.f;
+
+    /// Get the smoothed PLR
+    float SmoothedPLR = 0.f;
+};
+
+
+
+
+//------------------------------------------------------------------------------
+// PacketLossRateEstimator
+
+bool PacketLossRateEstimator::UpdateOnDatagram(const DatagramInfo& info)
+{
+    const int64_t delta = (int64_t)(info.Nonce - NextExpectedNonce);
+    IsReordered = delta < 0;
+    if (!IsReordered)
+        NextExpectedNonce = info.Nonce + 1;
+
+    // If datagram is received out of order:
+    if (IsReordered)
+    {
+        // If older than dejitter bin:
+        const int64_t deltaNonceDejitter = (int64_t)(info.Nonce - DejitterBin.NonceStart);
+        if (deltaNonceDejitter < 0)
+            return false; // Too old
+
+        // If older than the latest bin:
+        const int64_t deltaNonceLatest = (int64_t)(info.Nonce - LatestBin.NonceStart);
+        if (deltaNonceLatest < 0)
+            DejitterBin.Count++; // Within dejitter bin
+        else
+            LatestBin.Count++; // Within latest bin
+
+        // We cannot finish an interval with a reordered datagram, so stop here
+        return false;
+    }
+
+    static const unsigned kMinBinCount = 10; // N >= 10
+    static const unsigned kMinElapsedUsec = 22 * 1000; // 22 ms
+    const unsigned elapsedUsec = (unsigned)(info.ReceiveUsec - LatestBin.FirstReceiveUsec);
+    const int64_t deltaNonceLatest = (int64_t)(info.Nonce - LatestBin.NonceStart);
+
+    // If bin is incomplete:
+    if (elapsedUsec < kMinElapsedUsec ||
+        (unsigned)deltaNonceLatest < kMinBinCount)
+    {
+        // Accumulate in latest bin
+        LatestBin.Count++;
+        return false;
+    }
+
+    // Get the count of nonces that should have been seen
+    const unsigned nonceRange = static_cast<unsigned>(LatestBin.NonceStart - DejitterBin.NonceStart);
+
+    // If some data is in the bin:
+    if (nonceRange > 0)
+    {
+        TONK_DEBUG_ASSERT(nonceRange >= kMinBinCount);
+        TONK_DEBUG_ASSERT(nonceRange >= DejitterBin.Count);
+
+        // Calculate the loss rate
+        LatestPLR = (nonceRange - DejitterBin.Count) / (float)nonceRange;
+
+        // PLR = PLR*7/8 + New/8
+        SmoothedPLR = SmoothedPLR * 0.875f + LatestPLR * 0.125f;
+    }
+
+    // Shift bins down
+    DejitterBin = LatestBin;
+    LatestBin.Count = 1;
+    LatestBin.FirstReceiveUsec = info.ReceiveUsec;
+    LatestBin.NonceStart = info.Nonce;
+
+    return true;
+}

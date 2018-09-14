@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Tonk Bandwidth Usage</title>
+<style>
+
+svg {
+  font-size: 10px;
+}
+
+.axis {
+  shape-rendering: crispEdges;
+}
+
+.axis path, .axis line {
+  fill: none;
+  stroke-width: .5px;
+}
+
+.x.axis path {
+  stroke: #000;
+}
+
+.x.axis line {
+  stroke: #fff;
+  stroke-opacity: .5;
+}
+
+.y.axis line {
+  stroke: #ddd;
+}
+
+path.line {
+  fill: none;
+  stroke: #000;
+  stroke-width: .5px;
+}
+
+rect.pane {
+  cursor: move;
+  fill: none;
+  pointer-events: all;
+}
+
+</style>
+<svg id=send_stats width="960" height="500"></svg>
+<svg id=receive_stats width="960" height="500"></svg>
+<script src="d3.v5.js"></script>
+<script src="send_stats.js"></script>
+<script src="receive_stats.js"></script>
+<script>
+
+// TODO: Min/Max OWD: https://bl.ocks.org/mbostock/3884914
+// TODO: Multi series: https://bl.ocks.org/mbostock/3884955
+// TODO: Hover-over
+// TODO: X-axis tweaks
+// TODO: Y-axis for BPS on left, milliseconds on right
+
+var send_svg = d3.select("svg#send_stats"),
+    send_width = +send_svg.attr("width"),
+    send_height = +send_svg.attr("height");
+
+var receive_svg = d3.select("svg#receive_stats"),
+    receive_width = +receive_svg.attr("width"),
+    receive_height = +receive_svg.attr("height");
+
+// Break the data up into X microsecond bins
+var sampleBinUsec = 2000;
+
+function getSampleDataLen(usecTimes) {
+  var i, usecSum = 0, len = usecTimes.length;
+  for (i = 0; i < len; ++i) {
+    usecSum += usecTimes[i];
+  }
+  return Math.floor((usecSum + sampleBinUsec - 1) / sampleBinUsec);
+}
+
+function resampleData(data, usecTimes, resultLen, usecShift, usecWindow) {
+  var seriesLen = data.length, timesLen = usecTimes.length;
+  if (usecWindow < sampleBinUsec) {
+    usecWindow = sampleBinUsec;
+  }
+  var a = [], i;
+  a.length = resultLen;
+  //var binOffset = Math.floor(usecWindow * 0.5);
+  var binOffset = 0; // This makes the left side of spikes represent fast changes better
+  var binStartUsec = -binOffset;
+  for (i = 0; i < resultLen; ++i)
+  {
+    var j, usecSum = usecShift, valueSum = 0;
+    var binEndUsec = binStartUsec + usecWindow;
+    for (j = 0; j < timesLen && j < seriesLen; ++j)
+    {
+      var dt = usecTimes[j];
+      usecSum += dt;
+      if (usecSum < binStartUsec) {
+        continue;
+      }
+      if (usecSum >= binEndUsec) {
+        break;
+      }
+      //var f = Math.abs((usecSum - (binStartUsec + binOffset)) / usecWindow);
+      var f = 0; // This makes the data more chunky - Seems more useful
+      valueSum += data[j] * (1.0 - f);
+    }
+    a[i] = valueSum;
+    binStartUsec += sampleBinUsec;
+  }
+  return a;
+}
+
+
+
+
+var send_n = SendStats.SeriesNames.length; // number of series
+var send_m = getSampleDataLen(SendStats.MicrosecondTimestamps); // number of samples per series
+
+var sendUsecWindow = 100000;
+
+var send_data = [];
+send_data.length = send_n;
+for (var i = 0; i < send_n; ++i) {
+  var series_name = SendStats.SeriesNames[i];
+  var seriesData = SendStats[series_name];
+  var resampledData = resampleData(seriesData, SendStats.MicrosecondTimestamps, send_m, 0, sendUsecWindow);
+
+  send_data[i] = resampledData.map(function(e) { 
+    return e * (1000000 / sendUsecWindow);
+  });
+}
+
+
+
+
+var send_stack = d3.stack().keys(d3.range(send_n)),
+    send_layers = send_stack(d3.transpose(d3.range(send_n).map(function (i) {
+      return send_data[i];
+    })));
+
+var send_x = d3.scaleLinear()
+    .domain([0, send_m - 1])
+    .range([0, send_width]);
+
+var send_xAxis = d3.axisBottom(send_x);
+
+send_svg.append("g")
+    .attr("transform", "translate(0,30)")
+    .call(send_xAxis);
+
+var send_minVal = d3.min(send_layers, function(layer) {
+  return d3.min(layer, function(d) {
+    return d[0]; }); });
+
+var send_maxVal = d3.max(send_layers, function(layer) {
+  return d3.max(layer, function(d) {
+    return d[1]; }); });
+
+var send_y = d3.scaleLinear()
+    .domain([send_minVal, send_maxVal])
+    .range([send_height, 0]);
+
+var send_yAxis = d3.axisLeft(send_y);
+
+send_svg.append("g")
+    .attr("transform", "translate(0,30)")
+    .call(send_yAxis);
+
+var send_color = d3.scaleOrdinal()
+    .domain(d3.range(send_n))
+    .range(d3.schemeCategory10);
+
+var send_area = d3.area()
+    .curve(d3.curveStepBefore)
+    .x(function(d, i) { return send_x(i); })
+    .y0(function(d) { return send_y(d[0]); })
+    .y1(function(d) { return send_y(d[1]); });
+
+send_svg.selectAll(".path")
+  .data(send_layers)
+  .enter().append("path")
+    .attr("d", send_area)
+    .attr("fill", function(d, i) { return send_color(i); });
+
+
+var receive_timeOffset;
+
+if (ReceiveStats.StartUsecU32 >= SendStats.StartUsecU32) {
+  receive_timeOffset = ReceiveStats.StartUsecU32 - SendStats.StartUsecU32;
+} else {
+  receive_timeOffset = -(SendStats.StartUsecU32 - ReceiveStats.StartUsecU32);
+}
+
+
+var receive_n = ReceiveStats.SeriesNames.length; // number of series
+var receive_m = getSampleDataLen(ReceiveStats.MicrosecondTimestamps); // number of samples per series
+
+var receive_UsecWindow = 100000;
+
+receive_n = 1;
+
+
+
+
+
+
+function resampleData2(data, usecTimes, resultLen, usecShift, usecWindow) {
+  var seriesLen = data.length, timesLen = usecTimes.length;
+  if (usecWindow < sampleBinUsec) {
+    usecWindow = sampleBinUsec;
+  }
+  var a = [], i;
+  a.length = resultLen;
+  //var binOffset = Math.floor(usecWindow * 0.5);
+  var binOffset = 0; // This makes the left side of spikes represent fast changes better
+  var binStartUsec = -binOffset;
+  for (i = 0; i < resultLen; ++i)
+  {
+    var j, usecSum = usecShift, valueSum = 0;
+    var binEndUsec = binStartUsec + usecWindow;
+    for (j = 0; j < timesLen && j < seriesLen; ++j)
+    {
+      var dt = usecTimes[j];
+      usecSum += dt;
+      if (usecSum < binStartUsec) {
+        continue;
+      }
+      if (usecSum >= binEndUsec) {
+        break;
+      }
+      //var f = Math.abs((usecSum - (binStartUsec + binOffset)) / usecWindow);
+      var f = 0; // This makes the data more chunky - Seems more useful
+      if (valueSum == 0 || valueSum > data[j]) {
+        valueSum = data[j];
+      }
+    }
+    a[i] = valueSum;
+    binStartUsec += sampleBinUsec;
+  }
+  return a;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+var receive_data = [];
+receive_data.length = receive_n;
+for (var i = 0; i < receive_n; ++i) {
+  var series_name = ReceiveStats.SeriesNames[i + 1];
+  var seriesData = ReceiveStats[series_name];
+  var resampledData = resampleData2(seriesData, ReceiveStats.MicrosecondTimestamps, receive_m, receive_timeOffset, receive_UsecWindow);
+
+  receive_data[i] = resampledData.map(function(e) { 
+    return e / receive_UsecWindow;
+  });
+}
+
+
+
+
+var receive_stack = d3.stack().keys(d3.range(receive_n)),
+    receive_layers = receive_stack(d3.transpose(d3.range(receive_n).map(function (i) {
+      return receive_data[i];
+    })));
+
+var receive_x = d3.scaleLinear()
+    .domain([0, receive_m - 1])
+    .range([0, receive_width]);
+
+var receive_xAxis = d3.axisBottom(receive_x);
+
+receive_svg.append("g")
+    .attr("transform", "translate(0,30)")
+    .call(receive_xAxis);
+
+var receive_minVal = d3.min(receive_layers, function(layer) {
+  return d3.min(layer, function(d) {
+    return d[0]; }); });
+
+var receive_maxVal = d3.max(receive_layers, function(layer) {
+  return d3.max(layer, function(d) {
+    return d[1]; }); });
+
+var receive_y = d3.scaleLinear()
+    .domain([receive_minVal, receive_maxVal])
+    .range([receive_height, 0]);
+
+var receive_yAxis = d3.axisLeft(receive_y);
+
+receive_svg.append("g")
+    .attr("transform", "translate(0,30)")
+    .call(receive_yAxis);
+
+var receive_color = d3.scaleOrdinal()
+    .domain(d3.range(receive_n))
+    .range(d3.schemeCategory10);
+
+var receive_area = d3.area()
+    .curve(d3.curveStepBefore)
+    .x(function(d, i) { return receive_x(i); })
+    .y0(function(d) { return receive_y(d[0]); })
+    .y1(function(d) { return receive_y(d[1]); });
+
+receive_svg.selectAll(".path")
+  .data(receive_layers)
+  .enter().append("path")
+    .attr("d", receive_area)
+    .attr("fill", function(d, i) { return receive_color(i); });
+
+
+</script>

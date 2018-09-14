@@ -1,0 +1,27 @@
+TODO?
+
++ If there's room in the last packet we're going to send in a flush, attach recovery data there a bit sooner
+
++ Steal bits from length field for Siamese recovery metadata
+
++ Siamese decoder should deallocate data even if no recovery packets are sent
+
++ Key agreement protocol using Curve25519
+
++ Encrypt with NORX
+
++ Unreliable but ordered based on nonce
+
++ Other types of CC (delay based, no-cc), selectable by config objects
+
++ Can we handle head loss detection more efficiently somehow?
+
++ TCP fallback on UDP handshake failure
+
++ Split transport components out into a middle library so that other UDP network library can be used underneath
+
++ Allow retransmits to be sent in the same packet as other data
+
++ MTU detection
+
++ Allow application to provide a list of target encoder rates so that Tonk can probe up with FEC without overusing the channel

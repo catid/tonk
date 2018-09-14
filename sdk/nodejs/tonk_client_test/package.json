@@ -1,0 +1,13 @@
+{
+  "name": "tonk-client-test",
+  "version": "1.0.0",
+  "main": "tonk.js",
+  "scripts": {
+    "build": "node-gyp build",
+    "install": "node-gyp rebuild",
+    "start": "node ./index.js"
+  },
+  "dependencies": {
+    "nan": "^2.7.0"
+  }
+}
