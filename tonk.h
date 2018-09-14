@@ -90,7 +90,7 @@
     TL;DR Tonk is all about reducing latency by taking advantage of faster CPUs.
 
     Appropriate applications:
-        + Data rate limit of 20 MB/s per connection
+        + Data rate limit of 20,000,000 bytes per second, per connection
         + Low-latency messaging
         + Mobile file (e.g. video/image) upload
         + Lossless video/audio streaming
@@ -141,6 +141,11 @@
         - TCP fallback if UDP-based handshakes fail (Application can do this)
         - Unreliable-but-ordered delivery (Can be done using Unreliable channel)
         - MTU detection (Assumes 1488 byte frames or larger)
+
+    Runtime flag options:
+        + UPnP port forwarding can be turned on
+        + FEC usage is minimal by default but can be turned on
+        + Zstd data compression can be turned off
 
     Tonk uses the Siamese library for its forward error correction (FEC),
         selective acknowledgements (SACK), and jitter buffer.
@@ -482,20 +487,20 @@ typedef enum TonkChannel_t
     TonkChannel_Last        = TonkChannel_Count - 1,
 
     /// In-order reliable message channels
-    TonkChannel_Reliable0 = 50,
-    TonkChannel_Reliable1 = 51,
-    TonkChannel_Reliable2 = 52,
-    TonkChannel_Reliable3 = 53,
-    TonkChannel_Reliable4 = 54,
-    TonkChannel_Reliable5 = 55,
+    TonkChannel_Reliable0   = 50,
+    TonkChannel_Reliable1   = 51,
+    TonkChannel_Reliable2   = 52,
+    TonkChannel_Reliable3   = 53,
+    TonkChannel_Reliable4   = 54,
+    TonkChannel_Reliable5   = 55,
 
     /// Low-priority in-order reliable message channels
-    TonkChannel_LowPri0 = 150,
-    TonkChannel_LowPri1 = 151,
-    TonkChannel_LowPri2 = 152,
-    TonkChannel_LowPri3 = 153,
-    TonkChannel_LowPri4 = 154,
-    TonkChannel_LowPri5 = 155,
+    TonkChannel_LowPri0     = 150,
+    TonkChannel_LowPri1     = 151,
+    TonkChannel_LowPri2     = 152,
+    TonkChannel_LowPri3     = 153,
+    TonkChannel_LowPri4     = 154,
+    TonkChannel_LowPri5     = 155,
 
     /// Unordered (Reliable) message channel
     TonkChannel_Unordered   = 200,

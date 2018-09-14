@@ -72,7 +72,7 @@ which also tests a bunch of the classes.
 
 ### Appropriate applications:
 
-+ Data rate limit of 20 MB/s per connection
++ Data rate limit of 20,000,000 bytes per second, per connection
 + Low-latency messaging
 + Mobile file (e.g. video/image) upload
 + Lossless video/audio streaming
@@ -122,6 +122,12 @@ which also tests a bunch of the classes.
 - TCP fallback if UDP-based handshakes fail (Application can do this)
 - Unreliable-but-ordered delivery (Can be done using Unreliable channel)
 - MTU detection (Assumes 1488 byte frames or larger)
+
+### Runtime flag options:
+
++ UPnP port forwarding can be turned on
++ FEC usage is minimal by default but can be turned on
++ Zstd data compression can be turned off
 
 
 #### Credits
