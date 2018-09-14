@@ -63,12 +63,11 @@
 
     Copa [1] demonstrated that it is effective to switch in/out of TCP-
     compatible modes.  It uses the double window delta of LEDBAT but with RTT,
-    so it is affected by reverse traffic.  Copa uses the inter-packet gap to
-    estimate a target send rate, which breaks down at higher rates unless the
-    algorithm is incorporated more tightly with the operating system, which is
-    unfortunately not an option for TonkCC.  Copa uses the same increase rate
-    as the decrease rate, which the PropRate authors recommend to use only when
-    optimizing for higher bandwidth.
+    so it is affected by reverse traffic.  Copa uses a tunable mathematical
+    expression to select the target send rate given measured router congestion,
+    which cleverly allows newer flows to elbow their way into the channel
+    quickly.  It uses some arbitrary scaling, where slow flows allow more
+    delay, and fast flows allow less delay.
 
     In addition to developing BBR, Google has been working on real-time
     congestion control schemes with the RMCAT working group.  Google moved ahead
@@ -83,8 +82,8 @@
     TonkCC incorporates some features from each of these.  It uses the AIAD
     scheme of PropRate, controlled by the congestion signal from LEDBAT
     (with a shorter trigger) and packet loss as in GoogCC, with a slow start
-    phase and TCP compatible mode similar to Copa.  The final algorithm is
-    engineered to be very simple, leaving off a number of good improvements.
+    phase similar to Copa.  The final algorithm is engineered to be very simple,
+    leaving off a number of good improvements.
 
 
     Algorithm Description:
@@ -145,8 +144,10 @@
 
     PropRate's monitor mode uses a packet train to help improve its step rate,
     which remains to be evaluated.  GoogCC's complex filtering may be a better
-    signal than the current method, but this is not measured.  Copa has a
-    velocity parameter that it tunes to react faster to bandwidth changes.
+    signal than the current method, but this is not measured.
+
+    Incorporating Copa's velocity term, equation-based rate control, and TCP-
+    competitive mode seem to be good next steps to improving TonkCC.
 
     All of these potential improvements were left out of TonkCC intentionally
     to keep the complexity of the software low for its first release.
