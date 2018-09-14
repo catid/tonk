@@ -101,6 +101,7 @@ which also tests a bunch of the classes.
 + 0-RTT connections: Server accepts data in first packet
 + Lower latency than TCP congestion control (10 milliseconds)
 + Enables file transfer coexisting with low latency applications
++ Message prioritization delivers the most important data first
 + Forward Error Correction (FEC) to reduce median latency
 + Ordered reliable data is compressed with Zstd for speedier delivery
 
