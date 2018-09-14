@@ -13,6 +13,7 @@ handling thread safety on the server side between multiple connections.
 
 Tonk implements a new type of jitter-robust time synchronization protocol
 over the Internet that is more suitable for mobile networks than NTP/PTP.
+Tonk enables applications to compress timestamps down to 2 or 3 bytes.
 
 Tonk implements a novel HARQ transport based on SiameseFEC, meaning that a
 new type of forward error correction is used to protect data and avoid
@@ -22,8 +23,10 @@ protecting reliable in-order data like a TCP stream, but less suitable for
 audio or video data protection, which does not need an infinite window.
 
 Tonk implements a new type of congestion control strategy that attempts to
-guarantee a low latency for real-time data while full-speed file transfers
-are being performed in the background.
+guarantee low latency for real-time data while full-speed file transfers
+are being performed in the background.  Tonk supports three levels of
+message prioritization, 12 different parallel data streams, unordered
+delivery, and unmetered unreliable delivery.
 
 Tonk implements several types of fully automated Peer2Peer NAT traversal to
 allow mobile applications to peer with the aid of a rendezvous server.
@@ -72,7 +75,7 @@ which also tests a bunch of the classes.
 + Data rate limit of 20 MB/s per connection
 + Low-latency messaging
 + Mobile file (e.g. video/image) upload
-+ Real-time lossless video or voice streaming
++ Lossless video/audio streaming
 + Real-time multiplayer gaming
 + Mobile VPN data accelerator
 + Peer2Peer mobile file transfer, chat, or data streaming
