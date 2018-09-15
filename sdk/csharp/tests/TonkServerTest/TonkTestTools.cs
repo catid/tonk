@@ -24,10 +24,6 @@ namespace TonkServerTest
 
     public class TestTools
     {
-        public static void SetupTonkInternals()
-        {
-        }
-
         public static void LogTonkStatus(SDKConnection connection)
         {
             Tonk.Status status = connection.GetStatus();

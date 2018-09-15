@@ -653,7 +653,7 @@ public static class Tonk
 {
     /// Library TONK_VERSION must match tonk.h
     /// Mismatched TonkVersion indicates that the linked library does not match this wrapper.
-    public const int TONK_VERSION = 6;
+    public const int TONK_VERSION = 8;
 
     /// TonkResult
     /// These are the result codes that can be returned from the tonk_*() functions.
@@ -843,6 +843,9 @@ public static class Tonk
         /// This includes the Reliable messages that will go out before these.
         /// Apps can use this to keep the network fed for file transfer purposes
         public UInt32 LowPriQueueMsec; ///< milliseconds
+
+        /// Interval between timer OnTick() calls in microseconds
+        public UInt32 TimerIntervalUsec; ///< microseconds
     }
 
     /// This is a data-structure returned by tonk_status().
@@ -966,11 +969,21 @@ public static class Tonk
         /// Last reliable channel
         public const uint Last = Count - 1;
 
-        /// First in-order reliable message channel
+        /// In-order reliable message channels
         public const uint Reliable0 = 50;
+        public const uint Reliable1 = 51;
+        public const uint Reliable2 = 52;
+        public const uint Reliable3 = 53;
+        public const uint Reliable4 = 54;
+        public const uint Reliable5 = 55;
 
-        /// First low-priority in-order reliable message channel
+        /// Low-priority in-order reliable message channels
         public const uint LowPri0 = 150;
+        public const uint LowPri1 = 151;
+        public const uint LowPri2 = 152;
+        public const uint LowPri3 = 153;
+        public const uint LowPri4 = 154;
+        public const uint LowPri5 = 155;
 
         /// Unordered (Reliable) message channel
         public const uint Unordered = 200;
@@ -1122,7 +1135,7 @@ public static class Tonk
     [StructLayout(LayoutKind.Sequential)]
     public struct SocketConfig
     {
-        /// Version of tonk.h
+        /// Version of tonk.h - Set to TONK_VERSION
         public UInt32 Version;
 
         /// Application context
@@ -1132,15 +1145,16 @@ public static class Tonk
         public UInt32 WorkerCount;
 
         /// Kernel buffer sizes for UDP ports
-        public UInt32 UDPSendBufferSizeBytes; ///< 64KB
-        public UInt32 UDPRecvBufferSizeBytes; ///< 64KB
+        public UInt32 UDPSendBufferSizeBytes;
+        public UInt32 UDPRecvBufferSizeBytes;
 
         /// Socket UDP port to listen on for connections
         /// Choose 0 for a random (client) port
         public UInt32 UDPListenPort;
 
         /// Client limit
-        public UInt32 MaximumClients; ///< No connections allowed
+        /// 0 = No incoming connections allowed
+        public UInt32 MaximumClients;
 
         /// Maximum number of clients from the same IP address.
         /// Connections beyond this limit will be rejected.
@@ -1151,28 +1165,25 @@ public static class Tonk
         public UInt32 MinuteFloodThresh;
 
         /// OnTick() rate and send interval for retransmissions
-        public UInt32 TimerIntervalUsec; ///< 20 msec
+        public UInt32 TimerIntervalUsec;
 
         /// Timeout before disconnection if no data is received
-        public UInt32 NoDataTimeoutUsec; ///< 20 seconds
+        public UInt32 NoDataTimeoutUsec;
 
         /// Time between client sending UDP Connection Requests
-        public UInt32 UDPConnectIntervalUsec; ///< 100 milliseconds
+        public UInt32 UDPConnectIntervalUsec;
 
         /// Timeout before disconnection if connection is not achieved
-        public UInt32 ConnectionTimeoutUsec; ///< 4 seconds
+        public UInt32 ConnectionTimeoutUsec;
 
         /// Interface network address to listen and send on.
         /// This can enable using 2+ WiFi interfaces to upload data simultaneously.
         /// Provide null (0) for all interfaces
         [MarshalAs(UnmanagedType.LPStr)] public string InterfaceAddress;
 
-        /// Maximum delay allowed for application
-        public UInt32 MaximumDelayMsec; ///< 100 milliseconds
-
         /// Limit on how much bandwidth can be used by each connection.
         /// 0 = No limit
-        public UInt32 BandwidthLimitBPS; ///< 2 MBPS
+        public UInt32 BandwidthLimitBPS;
 
         /// Some combination of the TONK_FLAGS_* above.
         public UInt32 Flags;

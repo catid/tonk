@@ -108,11 +108,11 @@ public:
         const char* ipString,
         uint16_t port,
         const void* data,
-        unsigned bytes);
+        uint32_t bytes);
     Result tonk_inject(
         uint16_t sourcePort,
         const uint8_t* data,
-        unsigned bytes
+        uint32_t bytes
     );
     void tonk_socket_destroy();
 

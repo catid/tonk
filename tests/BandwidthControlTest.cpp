@@ -117,7 +117,7 @@ bool BandwidthControlTest::Initialize()
             MauAppContextPtr context,
             uint16_t destPort,
             const void* data,
-            unsigned bytes)
+            uint32_t bytes)
         {
             BWCTestChannel* channel = reinterpret_cast<BWCTestChannel*>(context);
             TonkSocket destSock;
@@ -186,7 +186,7 @@ bool BandwidthControlTest::Initialize()
             TonkAppContextPtr context, ///< [in] Application context pointer
             uint16_t         destPort, ///< [in] Destination port
             const uint8_t*       data, ///< [in] Message data
-            unsigned            bytes  ///< [in] Message bytes
+            uint32_t            bytes  ///< [in] Message bytes
             )
         {
             BWCTestChannel* channel = reinterpret_cast<BWCTestChannel*>(context);
@@ -209,7 +209,7 @@ bool BandwidthControlTest::Initialize()
             TonkAppContextPtr context, ///< [in] Application context pointer
             uint16_t         destPort, ///< [in] Destination port
             const uint8_t*       data, ///< [in] Message data
-            unsigned            bytes  ///< [in] Message bytes
+            uint32_t            bytes  ///< [in] Message bytes
             )
         {
             BWCTestChannel* channel = reinterpret_cast<BWCTestChannel*>(context);

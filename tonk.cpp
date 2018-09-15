@@ -302,7 +302,7 @@ TONK_EXPORT TonkResult tonk_advertise(
     const char*  ipString, ///< [in] Destination IP address
     uint16_t         port, ///< [in] Destination port
     const void*      data, ///< [in] Message data
-    unsigned        bytes  ///< [in] Message bytes
+    uint32_t        bytes  ///< [in] Message bytes
 )
 {
     auto session = reinterpret_cast<ApplicationSession*>(tonkSocket);
@@ -322,7 +322,7 @@ TONK_EXPORT TonkResult tonk_inject(
     TonkSocket   tonkSocket, ///< [in] Socket to inject
     uint16_t     sourcePort, ///< [in] Source port of datagram
     const void*        data, ///< [in] Datagram data
-    unsigned          bytes  ///< [in] Datagram bytes
+    uint32_t          bytes  ///< [in] Datagram bytes
 )
 {
     auto session = reinterpret_cast<ApplicationSession*>(tonkSocket);
@@ -340,7 +340,8 @@ TONK_EXPORT TonkResult tonk_inject(
 }
 
 TONK_EXPORT void tonk_socket_destroy(
-    TonkSocket tonkSocket  ///< Socket to shutdown
+    TonkSocket tonkSocket, ///< [in] Socket to shutdown
+    uint32_t shouldBlock   ///< [in] Boolean: Should this function block?
 )
 {
     auto session = reinterpret_cast<ApplicationSession*>(tonkSocket);

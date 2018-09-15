@@ -594,7 +594,7 @@ typedef struct TonkConnectionConfig_t
 /// TonkSocket Configuration
 typedef struct TonkSocketConfig_t
 {
-    /// Version of tonk.h
+    /// Version of tonk.h - Set to TONK_VERSION
     uint32_t Version TONK_CPP(= TONK_VERSION);
 
     /// Application context
@@ -612,7 +612,8 @@ typedef struct TonkSocketConfig_t
     uint32_t UDPListenPort TONK_CPP(= 0);
 
     /// Client limit
-    uint32_t MaximumClients TONK_CPP(= 0); ///< No connections allowed
+    /// 0 = No incoming connections allowed
+    uint32_t MaximumClients TONK_CPP(= 0);
 
     /// Maximum number of clients from the same IP address.
     /// Connections beyond this limit will be rejected.
@@ -731,7 +732,7 @@ typedef struct TonkSocketConfig_t
         const char*      ipString, ///< [in] IP address string of peer application
         uint16_t             port, ///< [in] Application port that sent the message
         uint8_t*             data, ///< [in] Message data
-        unsigned            bytes  ///< [in] Message bytes
+        uint32_t            bytes  ///< [in] Message bytes
         ) TONK_CPP(= 0);
 
     /// SendToHook context
@@ -755,7 +756,7 @@ typedef struct TonkSocketConfig_t
         TonkAppContextPtr context, ///< [in] Application context pointer
         uint16_t         destPort, ///< [in] Destination port
         const uint8_t*       data, ///< [in] Message data
-        unsigned            bytes  ///< [in] Message bytes
+        uint32_t            bytes  ///< [in] Message bytes
         ) TONK_CPP(= 0);
 } TonkSocketConfig;
 
@@ -823,7 +824,7 @@ TONK_EXPORT TonkResult tonk_advertise(
     const char*  ipString, ///< [in] Destination IP address
     uint16_t         port, ///< [in] Destination port
     const void*      data, ///< [in] Message data
-    unsigned        bytes  ///< [in] Message bytes
+    uint32_t        bytes  ///< [in] Message bytes
 );
 
 /**
@@ -840,17 +841,25 @@ TONK_EXPORT TonkResult tonk_inject(
     TonkSocket   tonkSocket, ///< [in] Socket to inject
     uint16_t     sourcePort, ///< [in] Source port of datagram
     const void*        data, ///< [in] Datagram data
-    unsigned          bytes  ///< [in] Datagram bytes
+    uint32_t          bytes  ///< [in] Datagram bytes
 );
 
 /**
     tonk_socket_destroy()
 
     Destroy the socket object, shutting down background threads and freeing
-    system sources.  This call blocks until all TonkConnections are freed.
+    system sources.
+
+    If `shouldBlock` is non-zero:
+        This function will block until all connections are closed.
+        This is useful to simplify application cleanup for C++ code.
+    If `shouldBlock` is zero:
+        This call completes in a background thread.
+        This is useful to simplify application cleanup for garbage collection.
 */
 TONK_EXPORT void tonk_socket_destroy(
-    TonkSocket tonkSocket  ///< [in] Socket to shutdown
+    TonkSocket tonkSocket, ///< [in] Socket to shutdown
+    uint32_t shouldBlock   ///< [in] Boolean: Should this function block?
 );
 
 

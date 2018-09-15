@@ -288,16 +288,6 @@ namespace TonkClientTest
         }
 
         public bool StartedP2PConnection = false;
-
-        // List of connections
-        MyClientConnection[] ClientList;
-        MyP2PClientConnection[] P2PClientList;
-
-        public void ClearClientList()
-        {
-            ClientList = null;
-            P2PClientList = null;
-        }
     };
 
     class Program
@@ -331,7 +321,7 @@ namespace TonkClientTest
             GC.WaitForPendingFinalizers();
 #endif
 
-            client.Dispose();
+            client.Dispose(); // Shutdown the Tonk object
 
 #if false
             // Test code: Verify that objects do not go out of scope too soon
@@ -345,13 +335,10 @@ namespace TonkClientTest
             // Choose linkage where we expect the Tonk.dll to be found under x86/ or x86_64/ based on platform
             Tonk.OverrideDLLDirectory();
 
-            // Copy TonkDebug.dll in place of Tonk.dll so we use the debug version
+            // Copy tonk_debug.dll in place of tonk.dll so we use the debug version
 #if DEBUG
             Tonk.ReplaceWithDebugDll();
 #endif
-
-            // Set up test tools
-            TestTools.SetupTonkInternals();
 
             RunClient();
 

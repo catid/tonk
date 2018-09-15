@@ -340,7 +340,7 @@ struct InjectServer : tonk::SDKSocket
             TonkAppContextPtr context, ///< [in] Application context pointer
             uint16_t         destPort, ///< [in] Destination port
             const uint8_t*       data, ///< [in] Message data
-            unsigned            bytes  ///< [in] Message bytes
+            uint32_t            bytes  ///< [in] Message bytes
             )
         {
             InjectServer* thiz = (InjectServer*)context;

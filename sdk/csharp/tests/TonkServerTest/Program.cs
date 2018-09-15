@@ -301,7 +301,7 @@ namespace TonkServerTest
             GC.WaitForPendingFinalizers();
 #endif
 
-            server.Dispose();
+            server.Dispose(); // Shutdown the Tonk object
 
 #if false
             // Test code: Verify that objects do not go out of scope too soon
@@ -315,13 +315,10 @@ namespace TonkServerTest
             // Choose linkage where we expect the Tonk.dll to be found under x86/ or x86_64/ based on platform
             Tonk.OverrideDLLDirectory();
 
-            // Copy TonkDebug.dll in place of Tonk.dll so we use the debug version
+            // Copy tonk_debug.dll in place of tonk.dll so we use the debug version
 #if DEBUG
             Tonk.ReplaceWithDebugDll();
 #endif
-
-            // Set up test tools
-            TestTools.SetupTonkInternals();
 
             RunServer();
 

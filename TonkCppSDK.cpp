@@ -71,11 +71,12 @@ typedef TonkResult(*fp_tonk_inject_t)(
     TonkSocket   tonkSocket, ///< [in] Socket to inject
     uint16_t           port, ///< [in] Local port
     const void*        data, ///< [in] Datagram data
-    unsigned          bytes  ///< [in] Datagram bytes
+    uint32_t          bytes  ///< [in] Datagram bytes
 );
 
 typedef void (*fp_tonk_socket_destroy_t)(
-    TonkSocket          tonkSocket  // Socket to shutdown
+    TonkSocket tonkSocket, ///< [in] Socket to shutdown
+    uint32_t shouldBlock   ///< [in] Boolean: Should this function block?
 );
 
 typedef TonkResult (*fp_tonk_advertise_t)(
@@ -83,7 +84,7 @@ typedef TonkResult (*fp_tonk_advertise_t)(
     const char*          ipString, // Destination IP address
     uint16_t                 port, // Destination port
     const void*              data, // Message data
-    unsigned                 bytes  // Message bytes
+    uint32_t                 bytes  // Message bytes
 );
 
 typedef TonkResult (*fp_tonk_connect_t)(
@@ -391,7 +392,7 @@ TonkResult tonk_inject(
     TonkSocket   tonkSocket, ///< [in] Socket to inject
     uint16_t     sourcePort, ///< [in] Source port of datagram
     const void*        data, ///< [in] Datagram data
-    unsigned          bytes  ///< [in] Datagram bytes
+    uint32_t          bytes  ///< [in] Datagram bytes
 )
 {
     if (!fp_tonk_inject) {
@@ -406,11 +407,12 @@ TonkResult tonk_inject(
 }
 
 void tonk_socket_destroy(
-    TonkSocket          tonkSocket  // Socket to shutdown
+    TonkSocket tonkSocket, ///< [in] Socket to shutdown
+    uint32_t shouldBlock   ///< [in] Boolean: Should this function block?
 )
 {
     if (fp_tonk_socket_destroy) {
-        fp_tonk_socket_destroy(tonkSocket);
+        fp_tonk_socket_destroy(tonkSocket, shouldBlock);
     }
 }
 
@@ -419,7 +421,7 @@ TonkResult tonk_advertise(
     const char*  ipString, ///< [in] Destination IP address
     uint16_t         port, ///< [in] Destination port
     const void*      data, ///< [in] Message data
-    unsigned        bytes  ///< [in] Message bytes
+    uint32_t        bytes  ///< [in] Message bytes
 )
 {
     if (!fp_tonk_advertise) {
@@ -922,7 +924,7 @@ SDKJsonResult SDKSocket::Create()
         const char* ipString,
         uint16_t port,
         uint8_t* data,
-        unsigned bytes)
+        uint32_t bytes)
     {
         SDKSocket* thiz = (SDKSocket*)context;
         thiz->OnAdvertisement(ipString, port, data, bytes);
@@ -975,7 +977,7 @@ void SDKSocket::Destroy()
 {
     if (MySocket != 0)
     {
-        tonk_socket_destroy(MySocket);
+        tonk_socket_destroy(MySocket, 0 /* Do not block here */);
         MySocket = 0;
     }
 }
@@ -984,7 +986,7 @@ SDKResult SDKSocket::Advertise(
     const std::string& ipString,
     uint16_t port,
     const void* data,
-    unsigned bytes)
+    uint32_t bytes)
 {
     return tonk_advertise(MySocket, ipString.c_str(), port, data, bytes);
 }

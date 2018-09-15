@@ -294,7 +294,7 @@ Result ApplicationSession::tonk_advertise(
     const char* ipString,
     uint16_t port,
     const void* data,
-    unsigned bytes)
+    uint32_t bytes)
 {
     // Treat empty string as IPv4 broadcast
     if (*ipString == '\0') {
@@ -331,7 +331,7 @@ Result ApplicationSession::tonk_advertise(
 Result ApplicationSession::tonk_inject(
     uint16_t sourcePort,
     const uint8_t* data,
-    unsigned bytes
+    uint32_t bytes
 )
 {
     // Address is set to IPv4 loopback

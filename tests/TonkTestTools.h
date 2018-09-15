@@ -45,8 +45,7 @@ namespace test {
 
 static const uint16_t kUDPServerPort_Server = 5060;
 
-#define TONK_TEST_SERVER_IP "slycog.com"
-//#define TONK_TEST_SERVER_IP "localhost"
+#define TONK_TEST_SERVER_IP "localhost"
 
 static const uint16_t kUDPServerPort_Client = 5060;
 //static const uint16_t kUDPServerPort_Client = 10200;
