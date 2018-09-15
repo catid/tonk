@@ -3,7 +3,10 @@
 
 Tonk.h provides a simple C API for a powerful, multithreaded network engine.
 The Tonk network engine transports message data over the Internet using a
-custom protocol over UDP/IP sockets.
+custom protocol over UDP/IP sockets.  Like TCP, Tonk delivers data reliably
+and in-order.  The main improvement over TCP is that data sent with Tonk
+arrives with much less latency due to congestion control and head-of-line
+blocking issues.
 
 #### Tonk is experimental: It's only been unit tested and hasn't been used for any major projects yet.  There are probably bugs to fix.  It currently only builds for Linux and Windows targets right now.
 
@@ -110,7 +113,7 @@ which also tests a bunch of the classes.
 + Jitter-robust time synchronization for mobile applications
 + NAT hole punching using UPnP for Peer2Peer connections
 + NAT hole punching using STUN + NATBLASTER (with rendezvous server)
-+ Automatically opens up any needed ports in the desktop firewall
++ Automatically opens up any needed ports in the Windows firewall
 + Detects and rejects data tampering on the wire
 + SYN-cookies enabled during connection floods to mitigate DoS attacks
 + Fast obfuscation (encryption without security guarantees)
