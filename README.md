@@ -56,11 +56,16 @@ TL;DR Tonk is all about reducing latency by taking advantage of faster CPUs.
 
 CMake can be used to generate build files for Linux or Windows.
 
+The main documentation is in the `tonk.h` header file.
+
 The `tonk` project is a dynamic link library (DLL) providing the Tonk C API.
 The `tonk_static` project is a static linkage version of Tonk.
 
 There is also a `tonkcppsdk` project that builds a C++ static library containing
 a loader that will load the Tonk DLL and also defines the C++ SDK for Tonk.
+
+There is a C# wrapper in the `sdk/csharp` directory.
+Some simple C# example projects are in the `sdk/csharp/tests` directory.
 
 There is a LAN advertising and direct file transfer demo in the `FileSender` and `FileReceiver` projects.
 
