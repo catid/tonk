@@ -287,12 +287,11 @@ static const unsigned kAckAckBytes = 3;
 
 /// This will enable datagram nonce compression.
 /// This is dangerous because re-ordering can cause messages to be received out
-/// of order leading to data corruption
+/// of order leading to data corruption.  The first time re-ordering is detected
+/// the kSeqCompMask flag bit is cleared, which will diable sequence compression
 #define TONK_ENABLE_NONCE_COMPRESSION
 
-/// This will enable reliable sequence number compression.
-/// Enabling this will reject datagrams received out of order to avoid
-/// misinterpreting a sequence number that would lead to data corruption
+/// This will enable reliable sequence number compression
 #define TONK_ENABLE_SEQNO_COMPRESSION
 
 /// Random padding adds extra overhead (about 8 bytes on average) in order to

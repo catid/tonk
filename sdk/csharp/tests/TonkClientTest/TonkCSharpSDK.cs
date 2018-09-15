@@ -37,10 +37,10 @@ namespace TonkSDK
     //------------------------------------------------------------------------------
     // SDKResult
 
-    public class SDKResult
+    public struct SDKResult
     {
         /// Default result is success
-        public Tonk.Result Result = Tonk.Result.Success;
+        public Tonk.Result Result;
 
         public SDKResult(Tonk.Result result = Tonk.Result.Success)
         {
@@ -65,11 +65,27 @@ namespace TonkSDK
     //------------------------------------------------------------------------------
     // SDKJsonResult
 
-    public class SDKJsonResult : SDKResult
+    public struct SDKJsonResult
     {
-        public string ErrorJson = "";
+        public string ErrorJson;
 
-        // Override ToString
+        /// Default result is success
+        public Tonk.Result Result;
+
+        public SDKJsonResult(Tonk.Result result = Tonk.Result.Success)
+        {
+            ErrorJson = "";
+            Result = result;
+        }
+
+        public bool Good()
+        {
+            return Tonk.IsGood(Result);
+        }
+        public bool Failed()
+        {
+            return Tonk.IsFailed(Result);
+        }
         public override string ToString()
         {
             string stringResult = Tonk.ResultToString(Result);
@@ -81,7 +97,7 @@ namespace TonkSDK
     //------------------------------------------------------------------------------
     // SDKAddress
 
-    public class SDKAddress
+    public struct SDKAddress
     {
         /// IPv4 or IPv6 human-readable IP address.  Guaranteed to be null-terminated
         public string IPAddress;
@@ -649,6 +665,7 @@ namespace TonkSDK
     }
 }
 
+[System.Security.SuppressUnmanagedCodeSecurityAttribute()]
 public static class Tonk
 {
     /// Library TONK_VERSION must match tonk.h
@@ -744,7 +761,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern IntPtr tonk_result_to_string(Result result);
 
     /// Maximum number of bytes to return, including string null terminator
@@ -1279,7 +1295,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern Result tonk_socket_create(
         ref SocketConfig config, ///< [in] Configuration for the socket
         out IntPtr socketOut,  ///< [out] Receives detailed error message on error
@@ -1323,7 +1338,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern Result tonk_advertise(
         IntPtr tonkSocket,     ///< [in] Socket to send advertisement from
         [MarshalAs(UnmanagedType.LPStr)] string ipString, ///< [in] Destination IP address
@@ -1347,7 +1361,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern Result tonk_inject(
         IntPtr tonkSocket, ///< [in] Socket to shutdown
         UInt16 port, ///< [in] Destination port
@@ -1367,7 +1380,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern void tonk_socket_destroy(
         IntPtr tonkSocket, ///< [in] Socket to shutdown
         UInt32 shouldBlock ///< [in] Should block?
@@ -1386,7 +1398,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern UInt64 tonk_sockets_alive();
 
 
@@ -1414,7 +1425,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern Result tonk_connect(
         IntPtr tonkSocket,           ///< [in] Socket to connect from
         ConnectionConfig config, ///< [in] Configuration for the connection
@@ -1434,7 +1444,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern Result tonk_status(
         IntPtr connection,           ///< [in] Connection to query
         out Status statusOut    ///< [out] Connection status
@@ -1450,7 +1459,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern Result tonk_status_ex(
         IntPtr connection,           ///< [in] Connection to query
         out StatusEx statusExOut ///< [out] Extended connection status
@@ -1472,7 +1480,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern Result tonk_send(
         IntPtr connection,  ///< [in] Connection to send on
         IntPtr data,        ///< [in] Pointer to message data
@@ -1492,7 +1499,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern void tonk_flush(
         IntPtr connection  ///< [in] Connection to flush
     );
@@ -1516,7 +1522,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern void tonk_close(
         IntPtr connection  ///< [in] Connection to close
     );
@@ -1547,7 +1552,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern void tonk_free(
         IntPtr connection  ///< [in] Connection to free
     );
@@ -1565,7 +1569,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern UInt64 tonk_time(); ///< Returns in microseconds
 
     /**
@@ -1627,7 +1630,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern UInt16 tonk_to_remote_time_16(
         IntPtr connection, ///< [in] Connection with remote host
         UInt64 localUsec  ///< [in] Local timestamp in microseconds
@@ -1649,7 +1651,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern UInt64 tonk_from_local_time_16(
         IntPtr connection, ///< [in] Connection with remote host
         UInt16 networkTimestamp16  ///< [in] Local timestamp to interpret
@@ -1684,7 +1685,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern UInt32 tonk_to_remote_time_23(
         IntPtr connection, ///< [in] Connection with remote host
         UInt64 localUsec  ///< [in] Local timestamp in microseconds
@@ -1706,7 +1706,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern UInt64 tonk_from_local_time_23(
         IntPtr connection, ///< [in] Connection with remote host
         UInt32 networkTimestamp23  ///< [in] Local timestamp to interpret
@@ -1735,7 +1734,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern Result tonk_p2p_connect(
         IntPtr aliceConnection, ///< [in] Peer 1 connection
         IntPtr bobConnection    ///< [in] Peer 2 connection
@@ -1754,7 +1752,6 @@ public static class Tonk
 #else
     [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern Result tonk_set_default_socket_config(
         UInt32 tonk_version,
         out SocketConfig configOut);
