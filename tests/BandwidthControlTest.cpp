@@ -94,10 +94,10 @@ bool BandwidthControlTest::Initialize()
         test.ChannelConfig.Router_RED_QueueFraction = 0.5f;
         test.ChannelConfig.LightSpeedMsec = 100;
 
-        test.ChannelConfig.DuplicateRate = 0.001f;
-        test.ChannelConfig.CorruptionRate = 0.001f;
-        //test.ChannelConfig.DuplicateRate = 0.f;
-        //test.ChannelConfig.CorruptionRate = 0.f;
+        //test.ChannelConfig.DuplicateRate = 0.001f;
+        //test.ChannelConfig.CorruptionRate = 0.001f;
+        test.ChannelConfig.DuplicateRate = 0.f;
+        test.ChannelConfig.CorruptionRate = 0.f;
 
         // Reordering settings
         test.ChannelConfig.ReorderMinimumLatencyMsec = 100;

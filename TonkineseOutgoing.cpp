@@ -45,6 +45,13 @@ static uint64_t m_Reliable = 0;
 
 
 //------------------------------------------------------------------------------
+// Constants
+
+/// Padding seed domain for PCGRandom
+static const uint64_t kPaddingSeedDomain = 123456;
+
+
+//------------------------------------------------------------------------------
 // Tools
 
 NonceT SessionOutgoing::writeNonce(uint8_t* footer, unsigned& footerBytesOut)
@@ -53,24 +60,39 @@ NonceT SessionOutgoing::writeNonce(uint8_t* footer, unsigned& footerBytesOut)
     // is not intended to provide real data security.
     NonceT nonce = NextNonce++;
 
-    // Use the magnitude of the difference between this nonce and the peer's
-    // next expected nonce to decide how many bytes to send for the field.
-    int32_t mag = (int32_t)nonce - (int32_t)LastAck.PeerNextExpectedNonce.ToUnsigned();
-    if (mag < 0) {
-        mag = -mag;
-    }
-
     // Choose the number of bytes to send:
-    if (mag < 0x80) {
-        footerBytesOut = 1; // Always at least 1 to avoid re-ordering issues
+    footerBytesOut = 3;
+
+#ifdef TONK_ENABLE_NONCE_COMPRESSION
+    if (ShouldCompressSequenceNumbers)
+    {
+        // Use the magnitude of the difference between this nonce and the peer's
+        // next expected nonce to decide how many bytes to send for the field.
+        int32_t mag = (int32_t)nonce - (int32_t)LastAck.PeerNextExpectedNonce.ToUnsigned();
+
+#if 1
+        if (mag == 1) {
+            footerBytesOut = 0;
+        }
+        else
+#endif
+        {
+            if (mag < 0) {
+                TONK_DEBUG_BREAK(); // Should never happen
+                mag = -mag;
+            }
+            ++mag;
+            TONK_DEBUG_ASSERT(mag < 0x800000);
+
+            if (mag < 0x80) {
+                footerBytesOut = 1;
+            }
+            else if (mag < 0x8000) {
+                footerBytesOut = 2;
+            }
+        }
     }
-    else if (mag < 0x8000) {
-        footerBytesOut = 2;
-    }
-    else {
-        footerBytesOut = 3;
-    }
-    TONK_DEBUG_ASSERT(mag < 0x800000);
+#endif
 
     protocol::WriteFooterField(footer, (uint32_t)nonce, footerBytesOut);
 
@@ -80,41 +102,45 @@ NonceT SessionOutgoing::writeNonce(uint8_t* footer, unsigned& footerBytesOut)
 /// taking into account the peer's next expected sequence number
 unsigned SessionOutgoing::getPacketNumBytes(int32_t packetNum) const
 {
-#ifdef TONK_ENABLE_SEQNO_COMPRESSION
-    // The peer uses its next expected sequence number to decompress the
-    // numbers we send.  By the time a new datagram arrives, that number
-    // may have advanced from that last one acknowledged through the last
-    // one that was sent.  When sending a new sequence number, include
-    // enough bits so that any possible number can decode the new one.
-    // So, take the larger of the distances from each end.
-    int32_t mag = (int32_t)packetNum - (int32_t)LastAck.PeerNextExpectedSeqNum;
-    if (mag < 0) {
-        mag = 1 - mag;
-    }
-    TONK_DEBUG_ASSERT(mag < 0x800000);
-    int32_t mag2 = (int32_t)packetNum - (int32_t)NextSequenceNumber;
-    if (mag2 < 0) {
-        mag2 = 1 - mag2;
-    }
-    TONK_DEBUG_ASSERT(mag2 < 0x800000);
-    if (mag < mag2) {
-        mag = mag2;
-    }
-
-    // Choose the number of bytes to send:
-    if (mag < 0x80) {
-        return 1;
-}
-    else if (mag < 0x8000) {
-        return 2;
-    }
-    else {
-        return 3;
-    }
-#else // TONK_ENABLE_SEQNO_COMPRESSION
     TONK_UNUSED(packetNum);
-    return 3;
+
+#ifdef TONK_ENABLE_SEQNO_COMPRESSION
+    if (ShouldCompressSequenceNumbers)
+    {
+        // The peer uses its next expected sequence number to decompress the
+        // numbers we send.  By the time a new datagram arrives, that number
+        // may have advanced from that last one acknowledged through the last
+        // one that was sent.  When sending a new sequence number, include
+        // enough bits so that any possible number can decode the new one.
+        // So, take the larger of the distances from each end.
+        int32_t mag = (int32_t)packetNum - (int32_t)LastAck.PeerNextExpectedSeqNum;
+        if (mag < 0) {
+            mag = -mag;
+        }
+        TONK_DEBUG_ASSERT(mag < 0x800000);
+        int32_t mag2 = (int32_t)packetNum - (int32_t)NextSequenceNumber;
+        if (mag2 < 0) {
+            mag2 = -mag2;
+        }
+        TONK_DEBUG_ASSERT(mag2 < 0x800000);
+        if (mag < mag2) {
+            mag = mag2;
+        }
+        // Add one to handle ambiguity due to two's complement negatives
+        // having one more value of precision than positive numbers
+        ++mag;
+
+        // Choose the number of bytes to send:
+        if (mag < 0x80) {
+            return 1;
+        }
+        else if (mag < 0x8000) {
+            return 2;
+        }
+    }
 #endif // TONK_ENABLE_SEQNO_COMPRESSION
+
+    return 3;
 }
 
 
@@ -574,6 +600,9 @@ void SessionOutgoing::sendQueuedDatagram(
 
     uint8_t* footer = datagramData + messageBytes;
     uint8_t flags = protocol::kConnectionMask;
+    if (ShouldCompressSequenceNumbers) {
+        flags |= protocol::kSeqCompMask;
+    }
 
     if (sequenceNumberBytes > 0)
     {
@@ -1163,6 +1192,9 @@ bool SessionOutgoing::PostDummyDatagram()
 
     uint8_t* footer = datagramData + messageBytes;
     uint8_t flags = protocol::kConnectionMask;
+    if (ShouldCompressSequenceNumbers) {
+        flags |= protocol::kSeqCompMask;
+    }
 
     // No reliable sequence number
 
@@ -1301,6 +1333,9 @@ Result SessionOutgoing::PostRecovery(int& bytesSentOut)
 
     uint8_t* footer = datagramData + messageBytes;
     uint8_t flags = protocol::kOnlyFECMask | protocol::kConnectionMask;
+    if (ShouldCompressSequenceNumbers) {
+        flags |= protocol::kSeqCompMask;
+    }
 
     // No reliable sequence number
 

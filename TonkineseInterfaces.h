@@ -76,6 +76,9 @@ public:
         unsigned bytes,
         Counter64 ackNonce,
         uint64_t receiveUsec) = 0;
+
+    /// Called if a datagram arrives indicating we should disable seqno compres
+    virtual void DisableSequenceNumberCompress() = 0;
 };
 
 

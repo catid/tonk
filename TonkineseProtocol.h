@@ -76,7 +76,7 @@
 
     [A] = 1 : Packet is part of a connection
     [B] = Handshake field is present?  1 = yes
-    [C] = 0 (Reserved/Unused)
+    [C] = Should compress sequence numbers?  1 = yes
     [D] = Only FEC Recovery Datagram?  1 = yes
     [E F] = # Bytes in <Encryption Nonce (0..3 bytes)> field
     [G H] = # Bytes in <Sequence Number (0..3 bytes)> field
@@ -84,7 +84,9 @@
     When [D] is set, the entire message payload is a single Recovery message,
     which saves two bytes of message frame overhead.
 
-    The [C] bit might be useful later for encryption or CC improvements.
+    When [C] is set, the receiver is allowed to compress sequence numbers to
+    save overhead.  This is cleared by the sender if a packet is received out
+    of order.
 */
 
 /**
@@ -282,6 +284,20 @@ static const unsigned kAckAckBytes = 3;
 
 //------------------------------------------------------------------------------
 // Protocol Behavior Constants
+
+/// This will enable datagram nonce compression.
+/// This is dangerous because re-ordering can cause messages to be received out
+/// of order leading to data corruption
+#define TONK_ENABLE_NONCE_COMPRESSION
+
+/// This will enable reliable sequence number compression.
+/// Enabling this will reject datagrams received out of order to avoid
+/// misinterpreting a sequence number that would lead to data corruption
+#define TONK_ENABLE_SEQNO_COMPRESSION
+
+/// Random padding adds extra overhead (about 8 bytes on average) in order to
+/// obscure the purpose of the encrypted datagrams.
+#define TONK_ENABLE_RANDOM_PADDING
 
 /// Minimum number of Asio worker threads.
 /// This is set to 2 with the intent to encourage the datagram receive thread to
@@ -502,7 +518,7 @@ bool DatagramIsTruncated(const uint8_t* data, size_t bytes);
 /// flag bytes, when the protocol definition changes.
 static const unsigned kConnectionMask = 0x80;
 static const unsigned kHandshakeMask  = 0x40;
-//static const unsigned kReservedMask   = 0x20;
+static const unsigned kSeqCompMask    = 0x20;
 static const unsigned kOnlyFECMask    = 0x10;
 static const unsigned kEncryptionNonceMask = 3 << 2;
 static const unsigned kSequenceNumberMask  = 3;
@@ -533,6 +549,10 @@ struct FlagsReader
     TONK_FORCE_INLINE bool IsOnlyFEC() const
     {
         return 0 != (FlagsByte & kOnlyFECMask);
+    }
+    TONK_FORCE_INLINE bool ShouldCompressSequenceNumbers() const
+    {
+        return 0 != (FlagsByte & kSeqCompMask);
     }
     TONK_FORCE_INLINE unsigned SequenceNumberBytes() const
     {

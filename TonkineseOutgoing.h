@@ -44,20 +44,6 @@ namespace tonk {
 
 
 //------------------------------------------------------------------------------
-// Constants
-
-/// Random padding adds extra overhead (about 8 bytes on average) in order to
-/// obscure the purpose of the encrypted datagrams.
-#define TONK_ENABLE_RANDOM_PADDING
-
-/// This will enable reliable packet sequence number compression
-#define TONK_ENABLE_SEQNO_COMPRESSION
-
-/// Padding seed domain for PCGRandom
-static const uint64_t kPaddingSeedDomain = 123456;
-
-
-//------------------------------------------------------------------------------
 // OutgoingQueuedDatagram
 
 /**
@@ -281,6 +267,9 @@ public:
         const uint8_t* data,
         size_t bytes) override;
 
+    // End of public API calls
+    //--------------------------------------------------------------------------
+
     /// Pass acknowledgement data from peer
     Result OnAcknowledgements(
         const uint8_t* data,
@@ -288,8 +277,16 @@ public:
         Counter64 ackNonce,
         uint64_t receiveUsec) override;
 
-    // End of public API calls
-    //--------------------------------------------------------------------------
+    /// Called if a datagram arrives indicating we should disable seqno compres
+    void DisableSequenceNumberCompress() override
+    {
+#ifdef TONK_DEBUG
+        if (ShouldCompressSequenceNumbers) {
+            Deps.Logger->Debug("Feedback disabling seqno compression");
+        }
+#endif // TONK_DEBUG
+        ShouldCompressSequenceNumbers = false;
+    }
 
     /// Flush immediately if possible to reduce latency
     Result Flush();
@@ -464,6 +461,12 @@ protected:
 
     /// Message compression
     MessageCompressor Compressor;
+
+    /// Sessions start by compressing sequence numbers.
+    /// As soon as a receiver notices that datagrams are being received out of
+    /// order, a bit in outgoing datagrams is set to 0 to indicate that sequence
+    /// number compression should be disabled, which will set this to false.
+    bool ShouldCompressSequenceNumbers = true;
 
 
     /// Send a queued datagram- Called by two functions below

@@ -128,13 +128,15 @@ Result SessionIncoming::ProcessDatagram(
     }
 
     // Read nonce
+    uint64_t nonce;
     const unsigned nonceBytes = flags.EncryptionNonceBytes();
-    if (nonceBytes <= 0) { // Unauthenticated - Must return Tonk_BogonData
-        return Result("SessionIncoming::ProcessDatagram", "No nonce", ErrorType::Tonk, Tonk_BogonData);
+    if (nonceBytes <= 0) {
+        nonce = AntiReplay.GetNextExpected().ToUnsigned();
     }
-
-    const uint32_t partialNonce = protocol::ReadFooterField(footer, nonceBytes);
-    const uint64_t nonce = AntiReplay.Expand(partialNonce, nonceBytes).ToUnsigned();
+    else {
+        const uint32_t partialNonce = protocol::ReadFooterField(footer, nonceBytes);
+        nonce = AntiReplay.Expand(partialNonce, nonceBytes).ToUnsigned();
+    }
     footer -= nonceBytes;
 
     // If nonce is duplicated:
@@ -144,6 +146,8 @@ Result SessionIncoming::ProcessDatagram(
         ModuleLogger.Debug("Nonce was duplicated: nonceBytes=", nonceBytes,
             " partialNonce=", HexString(partialNonce), " nonce=", HexString(nonce));
 #endif
+        // This may mean sequence number compression is not going to work due to re-ordering
+        Deps.Outgoing->DisableSequenceNumberCompress();
         return Result("SessionIncoming::ProcessDatagram", "Ignored dupe", ErrorType::Tonk, Tonk_BogonData);
     }
 
@@ -151,7 +155,10 @@ Result SessionIncoming::ProcessDatagram(
     const uint16_t expectedTag = Decryptor.Tag(data, bytes - protocol::kUntaggedDatagramBytes, nonce);
     const uint16_t tag = siamese::ReadU16_LE(data + bytes - protocol::kEncryptionTagBytes);
     const uint32_t flagsInt = protocol::TimestampFlagTagInt(remoteSendTS24.ToUnsigned(), flags.FlagsByte);
-    if ((tag ^ Decryptor.TagInt(flagsInt)) != expectedTag) {
+    if ((tag ^ Decryptor.TagInt(flagsInt)) != expectedTag)
+    {
+        // This may mean sequence number compression is not going to work due to re-ordering
+        Deps.Outgoing->DisableSequenceNumberCompress();
         return Result("SessionIncoming::ProcessDatagram", "Bad checksum", ErrorType::Tonk, Tonk_BogonData);
     }
     static_assert(protocol::kEncryptionTagBytes == 2, "Update this if that changes");
@@ -204,6 +211,15 @@ Result SessionIncoming::ProcessDatagram(
 
     if (seqBytes > 0)
     {
+#ifdef TONK_ENABLE_SEQNO_COMPRESSION
+        // If the sequence number has less precision than the nonce and data is received out of order:
+        if (seqBytes < nonceBytes && AntiReplay.GetNextExpected() > nonce + 1) {
+            // This is done because the sequence number compression may cause the
+            // sequence numbers to decode incorrectly leading to data corruption
+            return Result("SessionIncoming::ProcessDatagram", "Ignored re-ordered", ErrorType::Tonk, Tonk_BogonData);
+        }
+#endif
+
         // Decompress sequence number
         CounterSeqNo nextExpectedSeq = FECNextExpectedPacketNum;
         if (seqBytes == 1) {
@@ -558,7 +574,6 @@ Result SessionIncoming::attemptDecode()
             float failRate = 0.f;
             if (solveFailCount > 0) {
                 failRate = solveFailCount / (float)(solveFailCount + successCount);
-                TONK_DEBUG_ASSERT(failRate < 0.8f)
             }
             Deps.Logger->Debug("Recovery failed and needs more data (rare): Failure rate = ", failRate, " solveFailCount=", solveFailCount, " successCount = ", successCount);
 

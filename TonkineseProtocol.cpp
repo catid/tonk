@@ -155,7 +155,7 @@ void GenerateDisconnect(uint64_t key, uint8_t* datagram)
     datagram += kHandshakeBytes;
 
     // Write flags byte
-    datagram[0] = kHandshakeMask | kConnectionMask;
+    datagram[0] = kHandshakeMask | kConnectionMask | kSeqCompMask;
     ++datagram;
 
     // Write hash value = 0
@@ -173,7 +173,7 @@ void GenerateS2CCookieResponse(uint64_t cookie, uint8_t* datagram)
     datagram += kHandshakeBytes;
 
     // Write flags byte
-    datagram[0] = kHandshakeMask | kConnectionMask; // TBD: Other bits?
+    datagram[0] = kHandshakeMask | kConnectionMask | kSeqCompMask;
     ++datagram;
 
     // Write hash value = 0
@@ -191,7 +191,7 @@ void GenerateS2CUnknownSource(uint8_t* datagram)
     datagram += kHandshakeBytes;
 
     // Write flags byte
-    datagram[0] = kHandshakeMask | kConnectionMask; // TBD: Other bits?
+    datagram[0] = kHandshakeMask | kConnectionMask | kSeqCompMask;
     ++datagram;
 
     // Write hash value = 0

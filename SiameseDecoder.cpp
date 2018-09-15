@@ -281,7 +281,7 @@ SiameseResult Decoder::AddRecovery(const SiameseRecoveryPacket& packet)
         LatestColumn = (metadata.ColumnStart + metadata.SumCount) % kColumnPeriod;
     }
 
-#if 0
+#if 0 /* Siamese correctly handles data received out of order */
     if (outOfOrder)
     {
         Logger.Warning("Ignoring recovery packet received out of order");
