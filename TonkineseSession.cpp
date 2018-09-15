@@ -585,24 +585,8 @@ void ApplicationSession::Shutdown()
         });
     }
 
-    const uint64_t t1 = siamese::GetTimeMsec();
-    while (SelfRefCount.ObjectInUse())
-    {
-        const uint64_t waitedMsec = siamese::GetTimeMsec() - t1;
-
-#ifdef TONK_DEBUG
-        static const uint64_t kMaxWaitTimeMsec = 500 * 1000; // 500 seconds
-#else
-        static const uint64_t kMaxWaitTimeMsec = 5 * 1000; // 5 seconds
-#endif
-        if (waitedMsec >= kMaxWaitTimeMsec)
-        {
-            TONK_DEBUG_BREAK();
-            Logger.Error("Wait timeout exceeded");
-            break;
-        }
-
-        // Wait a little longer
+    // Wait forever until references are released
+    while (SelfRefCount.ObjectInUse()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 

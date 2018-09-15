@@ -1132,8 +1132,8 @@ TONK_EXPORT uint64_t tonk_from_local_time_23(
     Returns other TonkResult codes on error.
 */
 TONK_EXPORT TonkResult tonk_p2p_connect(
-    TonkConnection aliceConnection,   ///< [in] Peer 1 connection
-    TonkConnection   bobConnection    ///< [in] Peer 2 connection
+    TonkConnection aliceConnection, ///< [in] Peer 1 connection
+    TonkConnection   bobConnection  ///< [in] Peer 2 connection
 );
 
 
@@ -1145,8 +1145,9 @@ TONK_EXPORT TonkResult tonk_p2p_connect(
 /// This is useful when calling from other languages that do not support default
 /// values for structures (for example: C#)
 TONK_EXPORT TonkResult tonk_set_default_socket_config(
-    uint32_t tonk_version,
-    TonkSocketConfig* configOut);
+    uint32_t       tonk_version, ///< [in] TONK_VERSION of the application
+    TonkSocketConfig* configOut  ///< [out] Configuration structure to write
+);
 
 
 #ifdef __cplusplus
