@@ -144,9 +144,6 @@
     <ClInclude Include="..\PacketCompression.h" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\HolePunch.README.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="..\README.md" />
   </ItemGroup>
 </Project>

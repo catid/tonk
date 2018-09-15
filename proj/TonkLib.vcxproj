@@ -474,9 +474,6 @@
     <ClInclude Include="..\WLANOptimizer.h" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\HolePunch.README.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="..\README.md" />
   </ItemGroup>
   <ItemGroup>
