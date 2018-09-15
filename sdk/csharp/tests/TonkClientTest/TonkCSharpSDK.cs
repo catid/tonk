@@ -151,7 +151,7 @@ namespace TonkSDK
                 sdkConnection = null;
 
                 // Force a GC collect here to avoid hanging during shutdown
-                GC.Collect();
+                //GC.Collect();
             };
 
             return sdkConnection.Config;
@@ -281,9 +281,9 @@ namespace TonkSDK
             {
                 // Kick off a GC collection to allow tonk_free() to be called
                 // by all the SDKConnection finalizers
-                GC.Collect();
+                //GC.Collect();
 
-                Tonk.tonk_socket_destroy(MySocket);
+                Tonk.tonk_socket_destroy(MySocket, 0/*do not block*/);
                 MySocket = IntPtr.Zero;
             }
         }
@@ -653,7 +653,7 @@ public static class Tonk
 {
     /// Library TONK_VERSION must match tonk.h
     /// Mismatched TonkVersion indicates that the linked library does not match this wrapper.
-    public const int TONK_VERSION = 8;
+    public const int TONK_VERSION = 9;
 
     /// TonkResult
     /// These are the result codes that can be returned from the tonk_*() functions.
@@ -1369,8 +1369,25 @@ public static class Tonk
 #endif
     [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
     public static extern void tonk_socket_destroy(
-        IntPtr tonkSocket  ///< [in] Socket to shutdown
+        IntPtr tonkSocket, ///< [in] Socket to shutdown
+        UInt32 shouldBlock ///< [in] Should block?
     );
+
+    /**
+        tonk_sockets_alive()
+
+        This returns the number of active sockets remaining.
+
+        If tonk_socket_destroy() was called without blocking, then this will return
+        zero after the socket has been destroyed in the background.
+    */
+#if UNITY_IPHONE && !UNITY_EDITOR
+    [DllImport("__Internal")]
+#else
+    [DllImport("tonk", CallingConvention = CallingConvention.Cdecl)]
+#endif
+    [System.Security.SuppressUnmanagedCodeSecurityAttribute()]
+    public static extern UInt64 tonk_sockets_alive();
 
 
     //------------------------------------------------------------------------------

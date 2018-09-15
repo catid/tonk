@@ -103,8 +103,8 @@ bool BandwidthControlTest::Initialize()
         test.ChannelConfig.ReorderMinimumLatencyMsec = 100;
         test.ChannelConfig.ReorderMaximumLatencyMsec = 550;
         test.ChannelConfig.OrderRate = 0.8f;
-        test.ChannelConfig.ReorderRate = 0.01f;
-        //test.ChannelConfig.ReorderRate = 0.005f;
+        //test.ChannelConfig.ReorderRate = 0.01f;
+        test.ChannelConfig.ReorderRate = 0.f;
 
         // Configure proxy
         test.ProxyConfig.Version = MAU_VERSION;
@@ -365,8 +365,6 @@ bool BandwidthControlTest::RunTest()
 #endif
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-
     for (BWCTestChannel& test : Tests)
     {
 #ifdef BWT_ENABLE_MAU
@@ -375,9 +373,18 @@ bool BandwidthControlTest::RunTest()
 #endif // BTW_ENABLE_MAU
 
         // Destroy the client and then the server, connection and socket
-        test.Client.Destroy();
-        test.Server.Destroy();
+        test.Client.NonBlockingDestroy();
+        test.Server.NonBlockingDestroy();
+    }
 
+    while (tonk_sockets_alive() > 0)
+    {
+        Logger.Info("Waiting for all sockets to close...");
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    for (BWCTestChannel& test : Tests)
+    {
 #ifdef BWT_ENABLE_MAU
         mau_proxy_destroy(test.Proxy);
 #endif // BTW_ENABLE_MAU

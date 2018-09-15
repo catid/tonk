@@ -44,7 +44,7 @@ namespace test {
 
 #define BWT_ENABLE_MAU
 
-#if 1
+#if 0
 
 static const int kParallelTests = 1;
 //#define BWC_FULL_DUPLEX
@@ -52,11 +52,11 @@ static const int kParallelTests = 1;
 #else
 
 #if defined(_DEBUG) || defined(DEBUG)
-static const int kParallelTests = 4;
+static const int kParallelTests = 10;
 
 #define BWC_FULL_DUPLEX
 #else
-static const int kParallelTests = 50;
+static const int kParallelTests = 100;
 
 #define BWC_FULL_DUPLEX
 #endif

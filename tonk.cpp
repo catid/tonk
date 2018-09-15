@@ -339,6 +339,16 @@ TONK_EXPORT TonkResult tonk_inject(
     return TonkResultFromDetailedResult(result);
 }
 
+static void destroy_session(ApplicationSession* session)
+{
+    session->tonk_socket_destroy();
+
+    // Object goes out of scope here----------------------------------------
+    delete session;
+
+    DecrementSessionCounter();
+}
+
 TONK_EXPORT void tonk_socket_destroy(
     TonkSocket tonkSocket, ///< [in] Socket to shutdown
     uint32_t shouldBlock   ///< [in] Boolean: Should this function block?
@@ -347,13 +357,19 @@ TONK_EXPORT void tonk_socket_destroy(
     auto session = reinterpret_cast<ApplicationSession*>(tonkSocket);
     if (session)
     {
-        session->tonk_socket_destroy();
-
-        // Object goes out of scope here----------------------------------------
-        delete session;
-
-        DecrementSessionCounter();
+        if (shouldBlock) {
+            destroy_session(session);
+        }
+        else {
+            std::thread(destroy_session, session).detach();
+        }
     }
+}
+
+TONK_EXPORT uint64_t tonk_sockets_alive()
+{
+    Locker locker(m_SessionCounterLock);
+    return m_SessionCounter;
 }
 
 

@@ -149,10 +149,24 @@ public:
 
     /**
         Destroy the socket object, shutting down background threads and freeing
-        system sources.  This function can be called from any callback.  It will
-        complete asynchronously in the background.
+        system sources.
+
+        This function will block until all background threads are completed.
+        Blocking is a good idea to make sure all the background threads are
+        cleanly stopped before an application terminates.
     */
-    void Destroy();
+    void BlockingDestroy();
+
+    /**
+        Destroy the socket object, shutting down background threads and freeing
+        system sources.
+
+        This function will complete in the background as soon as all application
+        references are released.
+
+        Call tonk_sockets_alive() to check how many sockets are still active.
+    */
+    void NonBlockingDestroy();
 
     /**
         tonk_advertise()

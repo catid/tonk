@@ -160,7 +160,7 @@
 */
 
 /// Library version
-#define TONK_VERSION 8
+#define TONK_VERSION 9
 
 // Tweak if the functions are exported or statically linked
 //#define TONK_DLL /* Defined when building/linking as DLL */
@@ -853,6 +853,9 @@ TONK_EXPORT TonkResult tonk_inject(
     If `shouldBlock` is non-zero:
         This function will block until all connections are closed.
         This is useful to simplify application cleanup for C++ code.
+        Blocking is a good idea to make sure all the background threads are
+        cleanly stopped before an application terminates.
+
     If `shouldBlock` is zero:
         This call completes in a background thread.
         This is useful to simplify application cleanup for garbage collection.
@@ -861,6 +864,16 @@ TONK_EXPORT void tonk_socket_destroy(
     TonkSocket tonkSocket, ///< [in] Socket to shutdown
     uint32_t shouldBlock   ///< [in] Boolean: Should this function block?
 );
+
+/**
+    tonk_sockets_alive()
+
+    This returns the number of active sockets remaining.
+
+    If tonk_socket_destroy() was called without blocking, then this will return
+    zero after the socket has been destroyed in the background.
+*/
+TONK_EXPORT uint64_t tonk_sockets_alive();
 
 
 //------------------------------------------------------------------------------

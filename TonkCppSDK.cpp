@@ -819,7 +819,7 @@ SDKSocket::SDKSocket()
 
 SDKSocket::~SDKSocket()
 {
-    Destroy();
+    BlockingDestroy();
 }
 
 TonkConnectionConfig SDKSocket::MakeConnectionConfig(SDKConnection* sdkConnection)
@@ -873,7 +873,7 @@ TonkConnectionConfig SDKSocket::MakeConnectionConfig(SDKConnection* sdkConnectio
 
 SDKJsonResult SDKSocket::Create()
 {
-    Destroy();
+    BlockingDestroy();
 
     TonkSocketConfig config = Config;
 
@@ -973,11 +973,20 @@ SDKJsonResult SDKSocket::Connect(
     return error;
 }
 
-void SDKSocket::Destroy()
+void SDKSocket::BlockingDestroy()
 {
     if (MySocket != 0)
     {
-        tonk_socket_destroy(MySocket, 0 /* Do not block here */);
+        tonk_socket_destroy(MySocket, 1);
+        MySocket = 0;
+    }
+}
+
+void SDKSocket::NonBlockingDestroy()
+{
+    if (MySocket != 0)
+    {
+        tonk_socket_destroy(MySocket, 0);
         MySocket = 0;
     }
 }

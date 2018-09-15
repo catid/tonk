@@ -158,7 +158,7 @@ namespace TonkClientTest
     {
         int StatusLogCounter = 0;
 
-        OWDTimeStatistics OWDStats;
+        OWDTimeStatistics OWDStats = new OWDTimeStatistics();
         int OWDStatsInterval = 0;
 
         UInt32 MBCounter = 0;

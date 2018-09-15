@@ -151,6 +151,9 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
     </ClCompile>
+    <Link>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName)_debug.pdb</ProgramDatabaseFile>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugStatic|Win32'">
     <ClCompile>
@@ -178,6 +181,9 @@
       <ForcedIncludeFiles>stdafx.h</ForcedIncludeFiles>
       <OmitFramePointers>false</OmitFramePointers>
     </ClCompile>
+    <Link>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName)_debug.pdb</ProgramDatabaseFile>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugStatic|x64'">
     <ClCompile>
