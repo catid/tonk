@@ -27,13 +27,6 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-/*
-    TODO:
-    File transfer C# SDK, and C# update for API changes
-    Unity example
-    Port to Android/iOS
-*/
-
 #ifndef CAT_TONKINESE_H
 #define CAT_TONKINESE_H
 
