@@ -136,6 +136,7 @@ which also tests a bunch of the classes.
 + UPnP port forwarding can be turned on
 + FEC usage is minimal by default but can be turned on
 + Zstd data compression can be turned off
++ Random padding is off by default and can be turned on
 
 
 #### Credits
