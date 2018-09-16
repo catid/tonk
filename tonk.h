@@ -656,6 +656,11 @@ typedef struct TonkSocketConfig_t
     /// Compression can cost a lot of extra CPU so it may be a good idea
 #define TONK_FLAGS_DISABLE_COMPRESSION 4
 
+    /// Option: Enable random padding?
+    /// If enabled, Tonk will pad each datagram with a random number of bytes
+    /// to obscure the meaning of the encrypted data
+#define TONK_FLAGS_ENABLE_PADDING 8
+
     /// Some combination of the TONK_FLAGS_* above.
     uint32_t Flags TONK_CPP(= 0);
 

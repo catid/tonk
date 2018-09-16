@@ -208,6 +208,7 @@ public:
     struct Dependencies
     {
         bool EnableCompression;
+        bool EnablePadding;
         logger::Channel* Logger;
         IUDPSender* UDPSender;
         RefCounter* ConnectionRef;

@@ -567,7 +567,8 @@ void SessionOutgoing::sendQueuedDatagram(
     unsigned paddingBytes = 0;
 
     // If there is room for one more message in the datagram:
-    if (messageBytes + protocol::kMessageFrameBytes <= MaxMessageSectionBytes)
+    if (Deps.EnablePadding &&
+        messageBytes + protocol::kMessageFrameBytes <= MaxMessageSectionBytes)
     {
         // Select the number of bytes to pad
         unsigned targetPadBytes = TONK_RAND_PAD_EXP[PaddingPRNG.Next() % 256];

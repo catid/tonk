@@ -172,6 +172,7 @@ bool BandwidthControlTest::Initialize()
         //flags |= TONK_FLAGS_ENABLE_FEC;
         //flags |= TONK_FLAGS_ENABLE_UPNP;
         flags |= TONK_FLAGS_DISABLE_COMPRESSION;
+        flags |= TONK_FLAGS_ENABLE_PADDING;
         test.Client.Config.Flags = flags;
 
         // Both client and server bind to a random port

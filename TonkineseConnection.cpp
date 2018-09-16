@@ -575,8 +575,12 @@ Result Connection::initSubsystems()
     const bool enableCompression = \
         (SocketConfig->Flags & TONK_FLAGS_DISABLE_COMPRESSION) == 0;
 
+    const bool enablePadding = \
+        (SocketConfig->Flags & TONK_FLAGS_ENABLE_PADDING) != 0;
+
     Result result = Outgoing.Initialize({
         enableCompression,
+        enablePadding,
         &Logger,
         Deps.UDPSender,
         &SelfRefCount,
