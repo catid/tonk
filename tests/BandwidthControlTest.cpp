@@ -169,10 +169,12 @@ bool BandwidthControlTest::Initialize()
         test.Client.Config.UDPSendBufferSizeBytes = 20 * 1000;
         test.Client.Config.WorkerCount = 2;
         uint32_t flags = 0;
-        //flags |= TONK_FLAGS_ENABLE_FEC;
+        flags |= TONK_FLAGS_DISABLE_FEC_BW_PROBES;
         //flags |= TONK_FLAGS_ENABLE_UPNP;
         flags |= TONK_FLAGS_DISABLE_COMPRESSION;
         flags |= TONK_FLAGS_ENABLE_PADDING;
+        //test.Client.Config.BandwidthLimitBPS = 200 * 1000;
+        //flags |= TONK_FLAGS_DISABLE_CC;
         test.Client.Config.Flags = flags;
 
         // Both client and server bind to a random port

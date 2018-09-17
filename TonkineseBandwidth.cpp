@@ -139,7 +139,12 @@ void SenderBandwidthControl::Initialize(
     static const float kInitialFECRate = 0.01f;
     RecoverySendCost = static_cast<int>(kReliableRewardTokens / kInitialFECRate);
 
-    Shape.AppBPS = protocol::kBandwidthBurstTokenLimit;
+    if (Params.IgnoreReceiverFeedback) {
+        Shape.AppBPS = Params.MaximumBPS;
+    }
+    else {
+        Shape.AppBPS = protocol::kBandwidthBurstTokenLimit;
+    }
 
     // Set initial recovery timer
     const uint64_t nowUsec = siamese::GetTimeUsec();
@@ -151,6 +156,12 @@ void SenderBandwidthControl::OnReceiverFeedback(BandwidthShape shape)
 {
     // Update recovery send cost
     RecoverySendCost = static_cast<int>(kReliableRewardTokens / shape.FECRate);
+
+    // Ignore receiver feedback?
+    if (Params.IgnoreReceiverFeedback) {
+        Shape.AppBPS = Params.MaximumBPS;
+        return;
+    }
 
     // Bound shape
     if (shape.AppBPS < protocol::kMinimumBytesPerSecond) {
@@ -625,7 +636,7 @@ ReceiverBandwidthControl::Decision ReceiverBandwidthControl::UpdateCC(
     // Wait at least 8 round trips to find the minimum OWD
     MinOWD_WindowUsec = min_rtt_usec * 8;
 
-    // Wait at least 2 seconds
+    // Wait at least 4 seconds
     if (MinOWD_WindowUsec < 4000000) {
         MinOWD_WindowUsec = 4000000;
     }

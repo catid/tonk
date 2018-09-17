@@ -1138,7 +1138,7 @@ Connection::TimerTickResult Connection::onTimerTick()
     }
 
     // If FEC is enabled for probing bandwidth:
-    if ((SocketConfig->Flags & TONK_FLAGS_ENABLE_FEC) != 0)
+    if ((SocketConfig->Flags & TONK_FLAGS_DISABLE_FEC_BW_PROBES) == 0)
     {
         while (SenderControl.ShouldSendProbe(recoveryBytesSent))
         {

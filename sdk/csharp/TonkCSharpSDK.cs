@@ -1104,18 +1104,38 @@ public static class Tonk
     /// Return value for OnIncomingConnection() that denies a new connection
     public const UInt32 TONK_DENY_CONNECTION = 0;
 
-    /// Option: Enable forward error correction?
-    /// This option reduces latency but will increase CPU usage, reducing the
-    /// maximum number of clients that can connect at once.
-    public const UInt32 TONK_FLAGS_ENABLE_FEC = 1;
+    /// Option: Disable using forward error correction for bandwidth probes?
+    /// With this option Tonk will send 1300-byte dummy packets to probe for
+    /// more bandwidth if the application cannot produce enough data, rather
+    /// than sending FEC recovery packets.  The default option of sending FEC
+    /// packets will reduce median packetloss but uses more CPU.
+    /// This option can be set differently on each side without side-effects
+    public const UInt32 TONK_FLAGS_DISABLE_FEC_BW_PROBES = 1;
 
     /// Option: Enable UPnP for this socket?
-    /// This option is recommended if peer2peer connections are expected.
+    /// This option is recommended if Peer2Peer connections are expected,
+    /// as it will greatly improve the peer connection success rate.
+    /// This option can be set differently on each side without side-effects
     public const UInt32 TONK_FLAGS_ENABLE_UPNP = 2;
 
     /// Option: Disable compression for this socket?
-    /// Compression can cost a lot of extra CPU so it may be a good idea
+    /// This will disable compression for outgoing data, which will save some
+    /// CPU and memory resource overhead.
+    /// This option can be set differently on each side without side-effects
     public const UInt32 TONK_FLAGS_DISABLE_COMPRESSION = 4;
+
+    /// Option: Enable random padding?
+    /// If enabled, Tonk will pad each outgoing datagram with a random number
+    /// of bytes to obscure the meaning of the encrypted data.
+    /// This option can be set differently on each side without side-effects
+    public const UInt32 TONK_FLAGS_ENABLE_PADDING = 8;
+
+    /// Option: Disable congestion control?
+    /// This ignores the receiver's feedback and will always try to send at the
+    /// application-provided BandwidthLimitBPS.  This may be useful if there
+    /// are issues where competing flows are taking away all the bandwidth.
+    /// This option can be set differently on each side without side-effects
+    public const UInt32 TONK_FLAGS_DISABLE_CC = 16;
 
     public delegate UInt32 PTonkSocket_OnIncomingConnection(
         IntPtr context, ///< Application context from SocketConfig

@@ -259,6 +259,9 @@ public:
 
     struct Parameters
     {
+        ///< Disable congestion control and always send at MaximumBPS?
+        bool IgnoreReceiverFeedback = false;
+
         /// Maximum bytes per second set by application.
         /// 0 = No limit
         unsigned MaximumBPS = 0; ///< Bytes per second

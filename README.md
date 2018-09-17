@@ -133,10 +133,13 @@ which also tests a bunch of the classes.
 
 ### Runtime flag options:
 
+These options can be set per-socket but not per-connection.  They can be set differently on each side of a connection.
+
++ FEC usage can be reduced to save some CPU overhead
 + UPnP port forwarding can be turned on
-+ FEC usage is minimal by default but can be turned on
-+ Zstd data compression can be turned off
++ Datagram compression can be turned off
 + Random padding is off by default and can be turned on
++ Automatic bandwidth control can be disabled and forced to a fixed maximum send rate
 
 
 #### Credits
