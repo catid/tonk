@@ -1,3 +1,4 @@
+
 /** \file
     \brief Simple Cipher
     \copyright Copyright (c) 2017-2018 Christopher A. Taylor.  All rights reserved.
@@ -361,7 +362,6 @@ uint16_t SimpleCipher::TagInt(uint32_t data)
     return 0;
 #endif // SECURITY_ENABLE_CHECKSUMS
 }
-
 
 
 } // namespace security
