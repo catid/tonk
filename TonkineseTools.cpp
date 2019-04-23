@@ -94,7 +94,11 @@ void SetCurrentThreadName(const char* threadName)
 #else
 void SetCurrentThreadName(const char* threadName)
 {
+#ifdef __APPLE__
+    pthread_setname_np(threadName);
+#else
     pthread_setname_np(pthread_self(), threadName);
+#endif
 }
 #endif
 
