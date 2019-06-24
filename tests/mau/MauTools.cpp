@@ -90,7 +90,11 @@ void SetCurrentThreadName(const char* threadName)
 #else
 void SetCurrentThreadName(const char* threadName)
 {
+#ifdef __APPLE__
+    pthread_setname_np(threadName);
+#else
     pthread_setname_np(pthread_self(), threadName);
+#endif
 }
 #endif
 
@@ -124,7 +128,7 @@ bool SetCurrentThreadAffinity(unsigned processorIndex)
 #ifdef _WIN32
     return 0 != ::SetThreadAffinityMask(
         ::GetCurrentThread(), (DWORD_PTR)1 << (processorIndex & 63));
-#elif !defined(ANDROID)
+#elif !defined(ANDROID) && !defined(__APPLE__)
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(processorIndex, &cpuset);
