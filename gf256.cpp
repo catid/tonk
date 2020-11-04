@@ -37,6 +37,17 @@
 #endif
 
 //------------------------------------------------------------------------------
+// Detect host byte order.
+// This check works with GCC and LLVM; assume little-endian byte order when
+// using any other compiler.
+// The result is verified during initialization.
+//
+#if defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) \
+    && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define GF256_IS_BIG_ENDIAN
+#endif
+
+//------------------------------------------------------------------------------
 // Workaround for ARMv7 that doesn't provide vqtbl1_*
 // This comes from linux-raid (https://www.spinics.net/lists/raid/msg58403.html)
 //
@@ -72,18 +83,14 @@ static GF256_ALIGNED SelfTestBuffersT m_SelfTestBuffers;
 
 static bool gf256_self_test()
 {
-    if ((uintptr_t)m_SelfTestBuffers.A % GF256_ALIGN_BYTES != 0) {
+    if ((uintptr_t)m_SelfTestBuffers.A % GF256_ALIGN_BYTES != 0)
         return false;
-    }
-    if ((uintptr_t)m_SelfTestBuffers.A % GF256_ALIGN_BYTES != 0) {
+    if ((uintptr_t)m_SelfTestBuffers.A % GF256_ALIGN_BYTES != 0)
         return false;
-    }
-    if ((uintptr_t)m_SelfTestBuffers.B % GF256_ALIGN_BYTES != 0) {
+    if ((uintptr_t)m_SelfTestBuffers.B % GF256_ALIGN_BYTES != 0)
         return false;
-    }
-    if ((uintptr_t)m_SelfTestBuffers.C % GF256_ALIGN_BYTES != 0) {
+    if ((uintptr_t)m_SelfTestBuffers.C % GF256_ALIGN_BYTES != 0)
         return false;
-    }
 
     // Check multiplication/division
     for (unsigned i = 0; i < 256; ++i)
@@ -94,20 +101,16 @@ static bool gf256_self_test()
             if (i != 0 && j != 0)
             {
                 uint8_t div1 = gf256_div(prod, (uint8_t)i);
-                if (div1 != j) {
+                if (div1 != j)
                     return false;
-                }
                 uint8_t div2 = gf256_div(prod, (uint8_t)j);
-                if (div2 != i) {
+                if (div2 != i)
                     return false;
-                }
             }
-            else if (prod != 0) {
+            else if (prod != 0)
                 return false;
-            }
-            if (j == 1 && prod != i) {
+            if (j == 1 && prod != i)
                 return false;
-            }
         }
     }
 
@@ -123,11 +126,9 @@ static bool gf256_self_test()
         m_SelfTestBuffers.B[i] = 0xf7;
     }
     gf256_add_mem(m_SelfTestBuffers.A, m_SelfTestBuffers.B, kTestBufferBytes);
-    for (unsigned i = 0; i < kTestBufferBytes; ++i) {
-        if (m_SelfTestBuffers.A[i] != (0x1f ^ 0xf7)) {
+    for (unsigned i = 0; i < kTestBufferBytes; ++i)
+        if (m_SelfTestBuffers.A[i] != (0x1f ^ 0xf7))
             return false;
-        }
-    }
 
     // Test gf256_add2_mem()
     for (unsigned i = 0; i < kTestBufferBytes; ++i)
@@ -137,11 +138,9 @@ static bool gf256_self_test()
         m_SelfTestBuffers.C[i] = 0x71;
     }
     gf256_add2_mem(m_SelfTestBuffers.A, m_SelfTestBuffers.B, m_SelfTestBuffers.C, kTestBufferBytes);
-    for (unsigned i = 0; i < kTestBufferBytes; ++i) {
-        if (m_SelfTestBuffers.A[i] != (0x1f ^ 0xf7 ^ 0x71)) {
+    for (unsigned i = 0; i < kTestBufferBytes; ++i)
+        if (m_SelfTestBuffers.A[i] != (0x1f ^ 0xf7 ^ 0x71))
             return false;
-        }
-    }
 
     // Test gf256_addset_mem()
     for (unsigned i = 0; i < kTestBufferBytes; ++i)
@@ -151,11 +150,9 @@ static bool gf256_self_test()
         m_SelfTestBuffers.C[i] = 0x6c;
     }
     gf256_addset_mem(m_SelfTestBuffers.A, m_SelfTestBuffers.B, m_SelfTestBuffers.C, kTestBufferBytes);
-    for (unsigned i = 0; i < kTestBufferBytes; ++i) {
-        if (m_SelfTestBuffers.A[i] != (0xaa ^ 0x6c)) {
+    for (unsigned i = 0; i < kTestBufferBytes; ++i)
+        if (m_SelfTestBuffers.A[i] != (0xaa ^ 0x6c))
             return false;
-        }
-    }
 
     // Test gf256_muladd_mem()
     for (unsigned i = 0; i < kTestBufferBytes; ++i)
@@ -165,11 +162,9 @@ static bool gf256_self_test()
     }
     const uint8_t expectedMulAdd = gf256_mul(0xaa, 0x6c);
     gf256_muladd_mem(m_SelfTestBuffers.A, 0x6c, m_SelfTestBuffers.B, kTestBufferBytes);
-    for (unsigned i = 0; i < kTestBufferBytes; ++i) {
-        if (m_SelfTestBuffers.A[i] != (expectedMulAdd ^ 0xff)) {
+    for (unsigned i = 0; i < kTestBufferBytes; ++i)
+        if (m_SelfTestBuffers.A[i] != (expectedMulAdd ^ 0xff))
             return false;
-        }
-    }
 
     // Test gf256_mul_mem()
     for (unsigned i = 0; i < kTestBufferBytes; ++i)
@@ -179,21 +174,16 @@ static bool gf256_self_test()
     }
     const uint8_t expectedMul = gf256_mul(0xa2, 0x55);
     gf256_mul_mem(m_SelfTestBuffers.A, m_SelfTestBuffers.B, 0xa2, kTestBufferBytes);
-    for (unsigned i = 0; i < kTestBufferBytes; ++i) {
-        if (m_SelfTestBuffers.A[i] != expectedMul) {
+    for (unsigned i = 0; i < kTestBufferBytes; ++i)
+        if (m_SelfTestBuffers.A[i] != expectedMul)
             return false;
-        }
-    }
 
-    if (m_SelfTestBuffers.A[kTestBufferBytes] != 0x5a) {
+    if (m_SelfTestBuffers.A[kTestBufferBytes] != 0x5a)
         return false;
-    }
-    if (m_SelfTestBuffers.B[kTestBufferBytes] != 0x5a) {
+    if (m_SelfTestBuffers.B[kTestBufferBytes] != 0x5a)
         return false;
-    }
-    if (m_SelfTestBuffers.C[kTestBufferBytes] != 0x5a) {
+    if (m_SelfTestBuffers.C[kTestBufferBytes] != 0x5a)
         return false;
-    }
 
     return true;
 }
@@ -609,7 +599,11 @@ static void gf256_mul_mem_init()
 //------------------------------------------------------------------------------
 // Initialization
 
-static unsigned char kLittleEndianTestData[4] = { 4, 3, 2, 1 };
+#ifdef GF256_IS_BIG_ENDIAN
+static unsigned char kEndianTestData[4] = { 1, 2, 3, 4 };
+#else
+static unsigned char kEndianTestData[4] = { 4, 3, 2, 1 };
+#endif
 
 union UnionType
 {
@@ -617,11 +611,11 @@ union UnionType
     char CharArray[4];
 };
 
-static bool IsLittleEndian()
+static bool IsExpectedEndian()
 {
     UnionType type;
     for (unsigned i = 0; i < 4; ++i)
-        type.CharArray[i] = kLittleEndianTestData[i];
+        type.CharArray[i] = kEndianTestData[i];
     return 0x01020304 == type.IntValue;
 }
 
@@ -635,8 +629,8 @@ extern "C" int gf256_init_(int version)
         return 0;
     Initialized = true;
 
-    if (!IsLittleEndian())
-        return -2; // Architecture is not supported (code won't work without mods).
+    if (!IsExpectedEndian())
+        return -2; // Unexpected byte order.
 
     gf256_architecture_init();
     gf256_poly_init(kDefaultPolynomialIndex);
@@ -824,9 +818,9 @@ extern "C" void gf256_add_mem(void * GF256_RESTRICT vx,
     const int offset = eight + four;
     switch (bytes & 3)
     {
-    case 3: x1[offset + 2] ^= y1[offset + 2]; // Fall-thru
-    case 2: x1[offset + 1] ^= y1[offset + 1]; // Fall-thru
-    case 1: x1[offset] ^= y1[offset]; // Fall-thru
+    case 3: x1[offset + 2] ^= y1[offset + 2];
+    case 2: x1[offset + 1] ^= y1[offset + 1];
+    case 1: x1[offset] ^= y1[offset];
     default:
         break;
     }
@@ -944,9 +938,9 @@ extern "C" void gf256_add2_mem(void * GF256_RESTRICT vz, const void * GF256_REST
     const int offset = eight + four;
     switch (bytes & 3)
     {
-    case 3: z1[offset + 2] ^= x1[offset + 2] ^ y1[offset + 2]; // Fall-thru
-    case 2: z1[offset + 1] ^= x1[offset + 1] ^ y1[offset + 1]; // Fall-thru
-    case 1: z1[offset] ^= x1[offset] ^ y1[offset]; // Fall-thru
+    case 3: z1[offset + 2] ^= x1[offset + 2] ^ y1[offset + 2];
+    case 2: z1[offset + 1] ^= x1[offset + 1] ^ y1[offset + 1];
+    case 1: z1[offset] ^= x1[offset] ^ y1[offset];
     default:
         break;
     }
@@ -1099,9 +1093,9 @@ extern "C" void gf256_addset_mem(void * GF256_RESTRICT vz, const void * GF256_RE
     const int offset = eight + four;
     switch (bytes & 3)
     {
-    case 3: z1[offset + 2] = x1[offset + 2] ^ y1[offset + 2]; // Fall-thru
-    case 2: z1[offset + 1] = x1[offset + 1] ^ y1[offset + 1]; // Fall-thru
-    case 1: z1[offset] = x1[offset] ^ y1[offset]; // Fall-thru
+    case 3: z1[offset + 2] = x1[offset + 2] ^ y1[offset + 2];
+    case 2: z1[offset + 1] = x1[offset + 1] ^ y1[offset + 1];
+    case 1: z1[offset] = x1[offset] ^ y1[offset];
     default:
         break;
     }
@@ -1216,6 +1210,16 @@ extern "C" void gf256_mul_mem(void * GF256_RESTRICT vz, const void * GF256_RESTR
     while (bytes >= 8)
     {
         uint64_t * GF256_RESTRICT z8 = reinterpret_cast<uint64_t *>(z1);
+#ifdef GF256_IS_BIG_ENDIAN
+        uint64_t word = (uint64_t)table[x1[0]] << 56;
+        word |= (uint64_t)table[x1[1]] << 48;
+        word |= (uint64_t)table[x1[2]] << 40;
+        word |= (uint64_t)table[x1[3]] << 32;
+        word |= (uint64_t)table[x1[4]] << 24;
+        word |= (uint64_t)table[x1[5]] << 16;
+        word |= (uint64_t)table[x1[6]] << 8;
+        word |= (uint64_t)table[x1[7]];
+#else
         uint64_t word = table[x1[0]];
         word |= (uint64_t)table[x1[1]] << 8;
         word |= (uint64_t)table[x1[2]] << 16;
@@ -1224,6 +1228,7 @@ extern "C" void gf256_mul_mem(void * GF256_RESTRICT vz, const void * GF256_RESTR
         word |= (uint64_t)table[x1[5]] << 40;
         word |= (uint64_t)table[x1[6]] << 48;
         word |= (uint64_t)table[x1[7]] << 56;
+#endif
         *z8 = word;
 
         bytes -= 8, x1 += 8, z1 += 8;
@@ -1234,10 +1239,17 @@ extern "C" void gf256_mul_mem(void * GF256_RESTRICT vz, const void * GF256_RESTR
     if (four)
     {
         uint32_t * GF256_RESTRICT z4 = reinterpret_cast<uint32_t *>(z1);
+#ifdef GF256_IS_BIG_ENDIAN
+        uint32_t word = (uint32_t)table[x1[0]] << 24;
+        word |= (uint32_t)table[x1[1]] << 16;
+        word |= (uint32_t)table[x1[2]] << 8;
+        word |= (uint32_t)table[x1[3]];
+#else
         uint32_t word = table[x1[0]];
         word |= (uint32_t)table[x1[1]] << 8;
         word |= (uint32_t)table[x1[2]] << 16;
         word |= (uint32_t)table[x1[3]] << 24;
+#endif
         *z4 = word;
     }
 
@@ -1245,9 +1257,9 @@ extern "C" void gf256_mul_mem(void * GF256_RESTRICT vz, const void * GF256_RESTR
     const int offset = four;
     switch (bytes & 3)
     {
-    case 3: z1[offset + 2] = table[x1[offset + 2]]; // Fall-thru
-    case 2: z1[offset + 1] = table[x1[offset + 1]]; // Fall-thru
-    case 1: z1[offset] = table[x1[offset]]; // Fall-thru
+    case 3: z1[offset + 2] = table[x1[offset + 2]];
+    case 2: z1[offset + 1] = table[x1[offset + 1]];
+    case 1: z1[offset] = table[x1[offset]];
     default:
         break;
     }
@@ -1427,6 +1439,16 @@ extern "C" void gf256_muladd_mem(void * GF256_RESTRICT vz, uint8_t y,
     while (bytes >= 8)
     {
         uint64_t * GF256_RESTRICT z8 = reinterpret_cast<uint64_t *>(z1);
+#ifdef GF256_IS_BIG_ENDIAN
+        uint64_t word = (uint64_t)table[x1[0]] << 56;
+        word |= (uint64_t)table[x1[1]] << 48;
+        word |= (uint64_t)table[x1[2]] << 40;
+        word |= (uint64_t)table[x1[3]] << 32;
+        word |= (uint64_t)table[x1[4]] << 24;
+        word |= (uint64_t)table[x1[5]] << 16;
+        word |= (uint64_t)table[x1[6]] << 8;
+        word |= (uint64_t)table[x1[7]];
+#else
         uint64_t word = table[x1[0]];
         word |= (uint64_t)table[x1[1]] << 8;
         word |= (uint64_t)table[x1[2]] << 16;
@@ -1435,6 +1457,7 @@ extern "C" void gf256_muladd_mem(void * GF256_RESTRICT vz, uint8_t y,
         word |= (uint64_t)table[x1[5]] << 40;
         word |= (uint64_t)table[x1[6]] << 48;
         word |= (uint64_t)table[x1[7]] << 56;
+#endif
         *z8 ^= word;
 
         bytes -= 8, x1 += 8, z1 += 8;
@@ -1445,10 +1468,17 @@ extern "C" void gf256_muladd_mem(void * GF256_RESTRICT vz, uint8_t y,
     if (four)
     {
         uint32_t * GF256_RESTRICT z4 = reinterpret_cast<uint32_t *>(z1);
+#ifdef GF256_IS_BIG_ENDIAN
+        uint32_t word = (uint32_t)table[x1[0]] << 24;
+        word |= (uint32_t)table[x1[1]] << 16;
+        word |= (uint32_t)table[x1[2]] << 8;
+        word |= (uint32_t)table[x1[3]];
+#else
         uint32_t word = table[x1[0]];
         word |= (uint32_t)table[x1[1]] << 8;
         word |= (uint32_t)table[x1[2]] << 16;
         word |= (uint32_t)table[x1[3]] << 24;
+#endif
         *z4 ^= word;
     }
 
@@ -1456,9 +1486,9 @@ extern "C" void gf256_muladd_mem(void * GF256_RESTRICT vz, uint8_t y,
     const int offset = four;
     switch (bytes & 3)
     {
-    case 3: z1[offset + 2] ^= table[x1[offset + 2]]; // Fall-thru
-    case 2: z1[offset + 1] ^= table[x1[offset + 1]]; // Fall-thru
-    case 1: z1[offset] ^= table[x1[offset]]; // Fall-thru
+    case 3: z1[offset + 2] ^= table[x1[offset + 2]];
+    case 2: z1[offset + 1] ^= table[x1[offset + 1]];
+    case 1: z1[offset] ^= table[x1[offset]];
     default:
         break;
     }
@@ -1480,6 +1510,7 @@ extern "C" void gf256_memswap(void * GF256_RESTRICT vx, void * GF256_RESTRICT vy
 
     x16 += count;
     y16 += count;
+    bytes -= count * 8;
 #else
     GF256_M128 * GF256_RESTRICT x16 = reinterpret_cast<GF256_M128 *>(vx);
     GF256_M128 * GF256_RESTRICT y16 = reinterpret_cast<GF256_M128 *>(vy);
@@ -1528,9 +1559,9 @@ extern "C" void gf256_memswap(void * GF256_RESTRICT vx, void * GF256_RESTRICT vy
     uint8_t temp;
     switch (bytes & 3)
     {
-    case 3: temp = x1[offset + 2]; x1[offset + 2] = y1[offset + 2]; y1[offset + 2] = temp; // Fall-thru
-    case 2: temp = x1[offset + 1]; x1[offset + 1] = y1[offset + 1]; y1[offset + 1] = temp; // Fall-thru
-    case 1: temp = x1[offset]; x1[offset] = y1[offset]; y1[offset] = temp; // Fall-thru
+    case 3: temp = x1[offset + 2]; x1[offset + 2] = y1[offset + 2]; y1[offset + 2] = temp;
+    case 2: temp = x1[offset + 1]; x1[offset + 1] = y1[offset + 1]; y1[offset + 1] = temp;
+    case 1: temp = x1[offset]; x1[offset] = y1[offset]; y1[offset] = temp;
     default:
         break;
     }
