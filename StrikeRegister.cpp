@@ -52,6 +52,7 @@ namespace security {
 void StrikeRegister::Reset(Counter64 newBase)
 {
     WindowBase = newBase;
+    LargestSequence = newBase;
     WindowBitRotation = 0;
     for (unsigned ii = 0; ii < kWordCount; ++ii) {
         SlidingWindow[ii] = 0;
