@@ -1475,7 +1475,7 @@ void StateMachine::RequestSOAP(int controlIndex, int requestIndex)
         //----------------------------------------------------------------------
         // API Lock
         {
-            std::lock_guard<std::mutex> locker(APILock);
+            std::lock_guard<std::mutex> locker(API_Lock);
 
             MappedPortLifetime* lp = API_Requests[requestIndex].API_LifetimePtr;
             if (lp) {
